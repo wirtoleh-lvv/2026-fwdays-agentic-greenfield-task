@@ -1,3 +1,23 @@
-# Vocabulary
+# Librarian MVP Vocabulary
 
-Placeholder for the shared domain language used across product and implementation documentation.
+- **Librarian:** The local-first web application for cataloging a personal collection of physical books.
+- **Home Library:** The user's collection of confirmed books stored by Librarian in their browser.
+- **Library Book:** A confirmed book record saved in the Home Library.
+- **Extracted Book Candidate:** Editable book information produced by AI from a Raw Uploaded Photo; it is not a Library Book until confirmed and saved.
+- **Confirmation Screen:** The screen where a user reviews, edits, confirms, or skips extracted candidates and can add a book manually.
+- **Manual Add:** Creating an editable book candidate without relying on photo extraction.
+- **Save:** Persisting a user-confirmed book to the Home Library.
+- **Skip:** Excluding a candidate from the current save operation.
+- **Needs Review:** A candidate state indicating that information is missing, uncertain, or requires user correction.
+- **Ready for Confirmation:** A candidate state indicating that required information is present and the candidate can be confirmed by the user.
+- **Duplicate:** A book determined to match a Library Book already stored in the Home Library.
+- **Possible Duplicate:** A candidate similar enough to an existing Library Book to require user review before saving.
+- **Duplicate Warning:** A notice shown before saving when a Duplicate or Possible Duplicate is detected.
+- **Normalization:** Converting book data to a consistent comparison form, such as trimming whitespace and ignoring letter case.
+- **Local Persistence:** Storing confirmed Library Books in the user's browser so they remain available after a page reload.
+- **Thin Backend:** A stateless server layer used only for operations that cannot safely run in the browser, such as AI extraction.
+- **Metadata Enrichment:** Best-effort addition or correction of book details using an external metadata source.
+- **Open Library:** The external service used as a best-effort source for Metadata Enrichment.
+- **Raw Uploaded Photo:** The original user-provided photo sent temporarily for book extraction and not retained permanently.
+- **Cover Image:** A visual representation of a book's front cover used within the book workflow.
+- **MVP:** The minimum product scope defined in `docs/PRD.md` and its approved requirements.
