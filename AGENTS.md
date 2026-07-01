@@ -26,6 +26,8 @@ Documentation responsibilities:
 Do not duplicate detailed requirements across files.
 Do not treat PRD as a full functional specification.
 
+Requirement IDs are defined in `docs/requirements/README.md`. OpenSpec changes, tests, PR notes, and QA reports should reference the applicable requirement IDs. Do not duplicate the full requirement ID list in this file.
+
 ## Agent Workflow
 
 - Do not implement application code without an approved OpenSpec change.
