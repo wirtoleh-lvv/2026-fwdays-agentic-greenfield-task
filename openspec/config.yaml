@@ -1,0 +1,55 @@
+schema: spec-driven
+
+context: |
+  Project: Librarian MVP
+
+  Chosen stack:
+  - Next.js
+  - TypeScript
+  - API routes
+  - Browser local persistence
+  - OpenSpec
+
+  Product summary:
+  Librarian is a local-first web app for organizing a personal home library from book cover photos.
+
+  MVP:
+  - Upload one image containing 1-5 visible front book covers
+  - Extract editable book candidates using AI
+  - Let the user review, edit, skip, save, or manually add books
+  - Warn about duplicates before saving
+  - Store confirmed books locally in the browser
+  - Let the user browse, search, edit, and delete saved books
+
+  Out of scope:
+  - Accounts/authentication
+  - Cloud sync
+  - Wishlist
+  - Recommendations
+  - Sharing
+  - Barcode scanning
+  - Advanced analytics
+  - Automatic saving without confirmation
+  - Permanent raw photo storage
+
+  Documentation:
+  - docs/PRD.md contains product context only
+  - docs/requirements/README.md defines requirement ID conventions
+  - docs/requirements/*.md contains detailed requirements
+  - docs/Vocabulary.md defines domain terms
+  - docs/adr/*.md records architecture decisions
+  - AGENTS.md defines agent workflow and guardrails
+
+rules:
+  proposal:
+    - Reference affected requirement IDs from docs/requirements/*.md
+    - Include explicit Non-goals
+    - Keep scope limited to one vertical slice
+    - Do not add out-of-scope MVP features
+  tasks:
+    - Break work into small reviewable tasks
+    - Include validation, tests, and documentation updates where relevant
+  spec:
+    - Use precise, testable behavior
+    - Avoid duplicating PRD content
+    - Link behavior to requirement IDs where possible
