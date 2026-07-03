@@ -47,9 +47,11 @@ rules:
     - Keep scope limited to one vertical slice
     - Do not add out-of-scope MVP features
   tasks:
-    - Break work into small reviewable tasks
+    - Break work into small reviewable end-to-end behavior slices
+    - Order implementation tasks for one red-green-refactor cycle at a time; do not batch tests after implementation
+    - Reference applicable requirement IDs in each behavior slice and its verification
     - Include validation, tests, and documentation updates where relevant
-  spec:
+  specs:
     - Use precise, testable behavior
     - Avoid duplicating PRD content
     - Link behavior to requirement IDs where possible

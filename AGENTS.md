@@ -30,9 +30,15 @@ Requirement IDs are defined in `docs/requirements/README.md`. OpenSpec changes, 
 
 ## Agent Workflow
 
+- Start new feature discovery and material requirement changes with `$grill-openspec`.
+- Use the grilling session to resolve scope, vocabulary, behavior, edge cases, and acceptance evidence before proposing implementation.
+- Capture resolved decisions only in their canonical owner; do not create competing context or requirement documents.
+- Create an OpenSpec proposal after the grill concludes that the smallest vertical slice is ready.
 - Do not implement application code without an approved OpenSpec change.
 - Work in small vertical slices.
 - Keep each change focused on one capability.
+- Apply approved changes with `$openspec-tdd`: one failing behavior test, minimal implementation, then behavior-preserving refactoring before the next scenario.
+- Test through public seams, mock only external system boundaries, and reference applicable requirement IDs in verification evidence.
 - Run available lint, typecheck, and tests before claiming work is complete.
 - Separate maker and checker passes:
   - Maker creates or modifies specs/code.

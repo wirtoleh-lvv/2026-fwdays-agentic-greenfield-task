@@ -1,0 +1,4 @@
+interface:
+  display_name: "Grill OpenSpec"
+  short_description: "Stress-test ideas before OpenSpec planning"
+  default_prompt: "Use $grill-openspec to challenge this idea before creating or changing an OpenSpec proposal."
