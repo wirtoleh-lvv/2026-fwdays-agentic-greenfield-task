@@ -1,0 +1,4 @@
+interface:
+  display_name: "Librarian Privacy Review"
+  short_description: "Audit uploads, retention, secrets, and API abuse"
+  default_prompt: "Use -librarian-privacy to audit this change against Librarian's privacy and stateless-backend rules."

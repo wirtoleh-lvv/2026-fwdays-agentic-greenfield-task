@@ -1,0 +1,4 @@
+interface:
+  display_name: "OpenSpec Compliance Audit"
+  short_description: "Check implementation traceability and scope"
+  default_prompt: "Use -openspec-compliance to audit this change against its OpenSpec scenarios and canonical requirement IDs."

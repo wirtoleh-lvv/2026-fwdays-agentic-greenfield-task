@@ -1,0 +1,4 @@
+interface:
+  display_name: "Librarian UI Verification"
+  short_description: "Verify rendered UI behavior and accessibility"
+  default_prompt: "Use -librarian-ui to verify this workflow from rendered screenshots and observable browser behavior."

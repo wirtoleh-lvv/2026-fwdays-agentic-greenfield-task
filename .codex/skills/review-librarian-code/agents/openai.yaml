@@ -1,0 +1,4 @@
+interface:
+  display_name: "Librarian Code Review"
+  short_description: "Review correctness at local-first public seams"
+  default_prompt: "Use -librarian-code to review this diff for correctness, maintainability, and local-first architecture violations."
