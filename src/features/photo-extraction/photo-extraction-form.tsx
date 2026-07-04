@@ -2,6 +2,7 @@
 
 import {
   ArrowLeft,
+  Check,
   ChevronRight,
   CircleAlert,
   HardDrive,
@@ -20,6 +21,8 @@ import {
 
 type CandidateDraft = Omit<ExtractedBookCandidate, "authors"> & {
   authorsText: string;
+  authorUnknown: boolean;
+  decision: "undecided" | "confirmed" | "skipped";
 };
 
 type ExtractionState = "idle" | "extracting" | "ready" | "empty" | "failed";
@@ -140,6 +143,8 @@ export function PhotoExtractionForm() {
           id: candidate.id,
           title: candidate.title,
           authorsText: candidate.authors.join(", "),
+          authorUnknown: false,
+          decision: "undecided",
         })),
       );
       setExtractionState(extracted.length === 0 ? "empty" : "ready");
@@ -158,7 +163,60 @@ export function PhotoExtractionForm() {
   ) {
     setCandidates((current) =>
       current.map((candidate) =>
-        candidate.id === id ? { ...candidate, [field]: value } : candidate,
+        candidate.id === id
+          ? {
+              ...candidate,
+              [field]: value,
+              authorUnknown:
+                field === "authorsText" && hasNonEmptyAuthor(value)
+                  ? false
+                  : candidate.authorUnknown,
+            }
+          : candidate,
+      ),
+    );
+  }
+
+  function updateAuthorUnknown(id: string, authorUnknown: boolean) {
+    setCandidates((current) =>
+      current.map((candidate) =>
+        candidate.id === id ? { ...candidate, authorUnknown } : candidate,
+      ),
+    );
+  }
+
+  function confirmCandidate(id: string) {
+    setCandidates((current) =>
+      current.map((candidate) =>
+        candidate.id === id && deriveCandidateReadiness(candidate).kind === "ready"
+          ? { ...candidate, decision: "confirmed" }
+          : candidate,
+      ),
+    );
+  }
+
+  function editCandidate(id: string) {
+    setCandidates((current) =>
+      current.map((candidate) =>
+        candidate.id === id ? { ...candidate, decision: "undecided" } : candidate,
+      ),
+    );
+  }
+
+  function skipCandidate(id: string) {
+    setCandidates((current) =>
+      current.map((candidate) =>
+        candidate.id === id && candidate.decision === "undecided"
+          ? { ...candidate, decision: "skipped" }
+          : candidate,
+      ),
+    );
+  }
+
+  function undoSkip(id: string) {
+    setCandidates((current) =>
+      current.map((candidate) =>
+        candidate.id === id ? { ...candidate, decision: "undecided" } : candidate,
       ),
     );
   }
@@ -196,6 +254,11 @@ export function PhotoExtractionForm() {
             candidates={candidates}
             onBack={returnToUpload}
             onUpdate={updateCandidate}
+            onUpdateAuthorUnknown={updateAuthorUnknown}
+            onConfirm={confirmCandidate}
+            onEdit={editCandidate}
+            onSkip={skipCandidate}
+            onUndo={undoSkip}
           />
         ) : (
           <>
@@ -369,6 +432,11 @@ function CandidateReview({
   candidates,
   onBack,
   onUpdate,
+  onUpdateAuthorUnknown,
+  onConfirm,
+  onEdit,
+  onSkip,
+  onUndo,
 }: {
   candidates: CandidateDraft[];
   onBack: () => void;
@@ -377,8 +445,59 @@ function CandidateReview({
     field: "title" | "authorsText",
     value: string,
   ) => void;
+  onUpdateAuthorUnknown: (id: string, authorUnknown: boolean) => void;
+  onConfirm: (id: string) => void;
+  onEdit: (id: string) => void;
+  onSkip: (id: string) => void;
+  onUndo: (id: string) => void;
 }) {
   const bookWord = candidates.length === 1 ? "book" : "books";
+  const pendingFocusId = useRef<string | null>(null);
+  const [announcement, setAnnouncement] = useState("");
+  const confirmedCount = candidates.filter(
+    (candidate) => candidate.decision === "confirmed",
+  ).length;
+  const skippedCount = candidates.filter(
+    (candidate) => candidate.decision === "skipped",
+  ).length;
+
+  useEffect(() => {
+    if (pendingFocusId.current === null) {
+      return;
+    }
+
+    document.getElementById(pendingFocusId.current)?.focus();
+    pendingFocusId.current = null;
+  }, [candidates]);
+
+  function transitionCandidate(
+    candidate: CandidateDraft,
+    position: number,
+    transition: "confirm" | "edit" | "skip" | "undo",
+  ) {
+    switch (transition) {
+      case "confirm":
+        pendingFocusId.current = `candidate-${candidate.id}-edit`;
+        setAnnouncement(`Candidate ${position} confirmed.`);
+        onConfirm(candidate.id);
+        break;
+      case "edit":
+        pendingFocusId.current = `candidate-${candidate.id}-title`;
+        setAnnouncement(`Candidate ${position} returned to editing.`);
+        onEdit(candidate.id);
+        break;
+      case "skip":
+        pendingFocusId.current = `candidate-${candidate.id}-undo`;
+        setAnnouncement(`Candidate ${position} skipped.`);
+        onSkip(candidate.id);
+        break;
+      case "undo":
+        pendingFocusId.current = `candidate-${candidate.id}-title`;
+        setAnnouncement(`Candidate ${position} returned to editing.`);
+        onUndo(candidate.id);
+        break;
+    }
+  }
 
   return (
     <>
@@ -394,11 +513,88 @@ function CandidateReview({
         </p>
       </div>
 
+      <p className="sr-only" role="status" aria-live="polite">
+        {announcement}
+      </p>
+
       <div className="candidate-list">
         {candidates.map((candidate, index) => {
           const position = index + 1;
           const titleId = `candidate-${candidate.id}-title`;
           const authorsId = `candidate-${candidate.id}-authors`;
+          const readiness = deriveCandidateReadiness(candidate);
+
+          if (candidate.decision === "confirmed") {
+            return (
+              <section
+                className="candidate-card candidate-card-decided candidate-card-confirmed"
+                key={candidate.id}
+                aria-labelledby={`candidate-${candidate.id}-heading`}
+              >
+                <h2
+                  className="sr-only"
+                  id={`candidate-${candidate.id}-heading`}
+                >
+                  Candidate {position}
+                </h2>
+                <div className="decided-candidate-summary">
+                  <span className="decided-status">
+                    <Check aria-hidden="true" />
+                    Confirmed
+                  </span>
+                  <strong>{candidate.title}</strong>
+                  <span>
+                    {hasNonEmptyAuthor(candidate.authorsText)
+                      ? candidate.authorsText
+                      : "Author unknown"}
+                  </span>
+                </div>
+                <button
+                  id={`candidate-${candidate.id}-edit`}
+                  className="inline-action"
+                  type="button"
+                  onClick={() =>
+                    transitionCandidate(candidate, position, "edit")
+                  }
+                >
+                  Edit
+                </button>
+              </section>
+            );
+          }
+
+          if (candidate.decision === "skipped") {
+            return (
+              <section
+                className="candidate-card candidate-card-decided candidate-card-skipped"
+                key={candidate.id}
+                aria-labelledby={`candidate-${candidate.id}-heading`}
+              >
+                <h2
+                  className="sr-only"
+                  id={`candidate-${candidate.id}-heading`}
+                >
+                  Candidate {position}
+                </h2>
+                <div className="decided-candidate-summary">
+                  <span className="decided-status decided-status-skipped">
+                    Skipped
+                  </span>
+                  <strong>{candidate.title || "Untitled candidate"}</strong>
+                </div>
+                <button
+                  id={`candidate-${candidate.id}-undo`}
+                  className="inline-action"
+                  type="button"
+                  onClick={() =>
+                    transitionCandidate(candidate, position, "undo")
+                  }
+                >
+                  Undo
+                </button>
+              </section>
+            );
+          }
 
           return (
             <section
@@ -410,8 +606,19 @@ function CandidateReview({
                 <h2 id={`candidate-${candidate.id}-heading`}>
                   Candidate {position}
                 </h2>
-                <span>Editable candidate</span>
+                <span className={`candidate-status candidate-status-${readiness.kind}`}>
+                  {readiness.kind === "ready" ? (
+                    <Check aria-hidden="true" />
+                  ) : (
+                    <CircleAlert aria-hidden="true" />
+                  )}
+                  {readiness.label}
+                </span>
               </div>
+
+              {readiness.message === null ? null : (
+                <p className="candidate-guidance">{readiness.message}</p>
+              )}
 
               <label htmlFor={titleId}>Title</label>
               <input
@@ -432,16 +639,93 @@ function CandidateReview({
                   onUpdate(candidate.id, "authorsText", event.target.value)
                 }
               />
+
+              {hasNonEmptyAuthor(candidate.authorsText) ? null : (
+                <div className="unknown-author-callout">
+                  <CircleAlert aria-hidden="true" />
+                  <div>
+                    <strong>No author entered.</strong>
+                    <span>
+                      If the author is truly unknown, acknowledge that below to
+                      continue.
+                    </span>
+                    <label className="unknown-author-control">
+                      <input
+                        type="checkbox"
+                        checked={candidate.authorUnknown}
+                        onChange={(event) =>
+                          onUpdateAuthorUnknown(candidate.id, event.target.checked)
+                        }
+                      />
+                      The author of this book is unknown to me
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              <div className="candidate-actions">
+                <button
+                  className="primary-button"
+                  type="button"
+                  disabled={readiness.kind !== "ready"}
+                  onClick={() =>
+                    transitionCandidate(candidate, position, "confirm")
+                  }
+                >
+                  <Check aria-hidden="true" />
+                  Confirm
+                </button>
+                <button
+                  className="candidate-skip-button"
+                  type="button"
+                  onClick={() =>
+                    transitionCandidate(candidate, position, "skip")
+                  }
+                >
+                  Skip
+                </button>
+              </div>
             </section>
           );
         })}
       </div>
+
+      <p className="decision-summary">
+        {confirmedCount} confirmed · {skippedCount} skipped
+      </p>
 
       <p className="unsaved-note">
         These candidates are editable and have not been saved to your library.
       </p>
     </>
   );
+}
+
+function deriveCandidateReadiness(candidate: CandidateDraft) {
+  const hasTitle = candidate.title.trim().length > 0;
+  const hasAuthor = hasNonEmptyAuthor(candidate.authorsText);
+
+  if (hasTitle && (hasAuthor || candidate.authorUnknown)) {
+    return {
+      kind: "ready" as const,
+      label: "Ready for Confirmation",
+      message: null,
+    };
+  }
+
+  return {
+    kind: "needs-review" as const,
+    label: "Needs Review",
+    message: !hasTitle
+      ? "A title is required before this candidate can be confirmed."
+      : "An author is required unless the author is genuinely unknown.",
+  };
+}
+
+function hasNonEmptyAuthor(authorsText: string) {
+  return authorsText
+    .split(",")
+    .some((author) => author.trim().length > 0);
 }
 
 function formatFileSize(bytes: number) {

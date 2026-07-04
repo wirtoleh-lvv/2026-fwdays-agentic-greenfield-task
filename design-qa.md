@@ -1,33 +1,32 @@
-# Add Books from Photo Design QA
+# Candidate Decision Design QA
 
-- **Source visual truth:** `docs/audits/librarian-mvp-prototype/screenshots/06-upload-idle.png` through `10-candidate-review-initial.png`
+- **Source visual truth:** `docs/audits/librarian-mvp-prototype/screenshots/10-candidate-review-initial.png` and `11-candidates-confirmed-and-skipped.png`
 - **Implementation URL:** `http://localhost:3000`
 - **Implementation screenshot:** not captured; the in-app browser was unavailable
-- **Target viewport:** 1440 × 1000 for upload, validation, selected-photo, and progress states; 1440 × 1822 for candidate review
-- **States:** idle upload, invalid upload, selected photo, extraction progress, and editable candidate review
+- **Target viewport:** source desktop viewports plus a mobile width near 390 px
+- **States:** editable ready/needs-review candidates and compact confirmed/skipped candidates
 - **Final result:** blocked
 
 ## Findings
 
 - [P1] Rendered visual comparison is unavailable.
-  - **Location:** all five target states.
-  - **Evidence:** the source screenshots opened successfully, but the configured in-app browser could not be acquired, so no implementation screenshot exists.
+  - **Location:** candidate review at desktop and mobile widths.
+  - **Evidence:** both source screenshots opened successfully, but the configured in-app browser was unavailable, so no current implementation screenshot exists.
   - **Impact:** fonts, spacing, colors, image crop, icon alignment, copy wrapping, focus visibility, and responsive behavior cannot be accepted from code inspection alone.
   - **Fix:** capture the implementation at the matching viewport in an authorized browser, combine each capture with its source state, and resolve any P0–P2 differences.
 
 ## Open Questions
 
-- The approved OpenSpec slice does not include candidate confirmation, saving, cover cropping, or Home Library navigation. Those controls and candidate cover thumbnails shown in the Figma prototype are intentionally absent.
-- The user’s successful live-provider test predates this visual implementation and does not verify the restyled rendered states.
+- Save, Manual Add, duplicate handling, persistence, and Home Library navigation shown in or adjacent to the prototype remain intentionally absent under the approved OpenSpec boundary.
+- Candidate cover thumbnails remain absent because the extraction contract does not return safe cover crops.
 
 ## Manual Acceptance
 
-On 2026-07-04, the user reported manually checking the restyled interface and
-confirmed that the requested Figma states, keyboard focus, status treatment,
-candidate editing, and responsive layout passed without findings. This closes
-the OpenSpec public-behavior verification task. The report remains blocked only
-as an artifact-based design-QA record because it has no captured implementation
-screenshot to compare with the source image.
+On 2026-07-04, the user confirmed the candidate interactions in the default
+desktop view, the mobile layout, and visible focus across all decision-card
+transformations. This satisfies the OpenSpec rendered checker, but this artifact
+remains blocked because it lacks the required source-and-implementation
+screenshot comparison.
 
 ## Required Fidelity Surfaces
 
@@ -35,7 +34,7 @@ screenshot to compare with the source image.
 - **Spacing and layout rhythm:** desktop and mobile rules are implemented; rendered comparison is pending.
 - **Colors and tokens:** the warm canvas, neutral surfaces, green actions, and semantic error colors are implemented as CSS tokens; rendered comparison and contrast spot checks are pending.
 - **Image quality and assets:** the selected-photo state uses the real transient object URL; Lucide supplies interface icons. Candidate cover thumbnails are intentionally omitted because the extraction contract does not return safe cover crops.
-- **Copy and content:** upload, privacy, progress, error, empty, and editable-candidate copy remain within the approved OpenSpec boundary.
+- **Copy and content:** readiness, missing-information guidance, unknown-author acknowledgement, decision labels, and counts are implemented; rendered comparison is pending.
 
 ## Full-view and Focused Comparison Evidence
 
@@ -43,13 +42,14 @@ Blocked: no implementation screenshot could be captured. Focused comparison of t
 
 ## Patches Made
 
-- Added Figma-derived layout, design tokens, responsive states, real selected-photo preview, and Lucide icons.
-- Preserved keyboard labels, visible focus styles, non-color-only statuses, retry behavior, and transient candidate editing.
-- Added public UI regression coverage; 12 files and 25 tests pass.
+- Added derived readiness badges, missing-information guidance, unknown-author acknowledgement, explicit Confirm/Skip actions, compact Confirmed/Skipped cards, and text counts.
+- Added keyboard focus restoration and a polite live announcement for decision transitions.
+- Moved the unknown-author callout below the author field to match the source layout.
+- Added public UI regression coverage; the current full suite passes 13 files and 32 tests.
 
 ## Implementation Checklist
 
-- Capture all five states at the matching viewport.
-- Compare source and implementation together, including focused control regions.
-- Verify keyboard focus and mobile wrapping in rendered pixels.
+- Capture editable and decided states at matching desktop and mobile viewports.
+- Compare each source and implementation capture together, including badges, callout, actions, compact cards, and counts.
+- Verify focus rings, focus movement, and mobile wrapping in rendered pixels.
 - Resolve all P0–P2 findings and change `final result` to `passed` only after re-checking.

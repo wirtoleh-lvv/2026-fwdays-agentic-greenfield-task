@@ -499,14 +499,34 @@ button {
   font-weight: 500;
 }
 
-.candidate-card-heading span {
+.candidate-status {
   padding: 5px 10px;
   border: 1px solid #c9d8c3;
   border-radius: 999px;
   background: var(--green-soft);
   color: #4f704f;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   font-size: 12px;
   font-weight: 650;
+}
+
+.candidate-status svg {
+  width: 13px;
+  height: 13px;
+}
+
+.candidate-status-needs-review {
+  border-color: #e9c879;
+  background: #fff5d9;
+  color: #9a5a16;
+}
+
+.candidate-guidance {
+  margin: -2px 0 4px;
+  color: var(--muted);
+  font-size: 13px;
 }
 
 .candidate-card label {
@@ -531,6 +551,133 @@ button {
 
 .candidate-card input:focus {
   border-color: var(--green);
+}
+
+.unknown-author-callout {
+  margin-top: 8px;
+  padding: 14px;
+  border: 1px solid #e9c879;
+  border-radius: 5px;
+  background: #fff9e9;
+  color: #8d4f15;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.unknown-author-callout > svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+}
+
+.unknown-author-callout strong,
+.unknown-author-callout span {
+  display: block;
+}
+
+.unknown-author-control {
+  margin-top: 12px !important;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #8d4f15;
+}
+
+.candidate-card .unknown-author-control input {
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  accent-color: var(--green);
+}
+
+.candidate-actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 12px;
+}
+
+.candidate-actions .primary-button {
+  width: auto;
+}
+
+.candidate-card-decided {
+  min-height: 112px;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+}
+
+.candidate-card-confirmed {
+  border-color: #b7c9b1;
+  background: #f2f2e9;
+}
+
+.candidate-card-skipped {
+  background: #f7f2ea;
+  color: #989087;
+}
+
+.candidate-card-skipped .decided-candidate-summary > strong {
+  text-decoration: line-through;
+}
+
+.decided-candidate-summary {
+  display: grid;
+  gap: 3px;
+}
+
+.decided-candidate-summary > strong {
+  font-size: 15px;
+}
+
+.decided-candidate-summary > span:last-child {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.decided-status {
+  color: #4f704f;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+}
+
+.decided-status svg {
+  width: 13px;
+  height: 13px;
+}
+
+.decided-status-skipped {
+  color: #989087;
+}
+
+.inline-action {
+  padding: 4px 0;
+  border: 0;
+  border-bottom: 1px solid currentColor;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+}
+
+.candidate-skip-button {
+  padding: 0 10px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+}
+
+.decision-summary {
+  margin: 22px 0 0;
+  color: var(--muted);
+  font-size: 14px;
 }
 
 .unsaved-note {
