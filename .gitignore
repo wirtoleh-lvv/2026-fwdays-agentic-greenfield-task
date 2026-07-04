@@ -18,6 +18,7 @@ dist/
 build/
 out/
 .next/
+*.tsbuildinfo
 __pycache__/
 *.pyc
 .venv/

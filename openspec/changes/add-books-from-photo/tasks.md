@@ -1,6 +1,6 @@
 ## 1. Implementation Readiness
 
-- [ ] 1.1 Establish the minimal Next.js and TypeScript project structure plus repeatable lint, typecheck, and narrow/full test commands required for red-green-refactor cycles (`TC-STACK-001`, `NFR-DX-001`).
+- [x] 1.1 Establish the minimal Next.js and TypeScript project structure plus repeatable lint, typecheck, and narrow/full test commands required for red-green-refactor cycles (`TC-STACK-001`, `NFR-DX-001`).
 - [ ] 1.2 HITL: select and document the initial server-side AI provider, model/configuration boundary, and placeholder-only environment setup without committing or exposing credentials (`NFR-PRIV-002`, `TC-AI-001`).
 
 ## 2. Successful Extraction Tracer
