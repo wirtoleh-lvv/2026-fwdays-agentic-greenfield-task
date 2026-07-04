@@ -12,8 +12,10 @@
   },
   "dependencies": {
     "next": "16.2.10",
+    "openai": "^6.45.0",
     "react": "19.2.7",
-    "react-dom": "19.2.7"
+    "react-dom": "19.2.7",
+    "sharp": "^0.35.3"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",

@@ -25,6 +25,24 @@ The slice ends when editable `ExtractedBookCandidate` values are displayed. No c
 
 ## Decisions
 
+### Use OpenAI Responses API with a configurable GPT-5.5 default
+
+The initial extraction provider is OpenAI through the server-side Responses
+API. The deployment default is `gpt-5.5`, selected as the quality baseline
+for reading several book covers from one image. The adapter uses image input,
+Structured Outputs, `store: false`, and low reasoning effort. A later
+evidence-backed optimization may configure `gpt-5.4-mini` without changing
+the browser or API contract.
+
+`OPENAI_API_KEY` supplies the server-only credential.
+`OPENAI_VISION_MODEL` controls the deployment model and defaults to
+`gpt-5.5` when unset. Only placeholder names and non-secret defaults belong
+in committed files; real values stay in the uncommitted `.env.local`.
+
+Alternative considered: make the provider or model part of the public request.
+That would expose an implementation decision to the browser and weaken the
+server-only provider boundary.
+
 ### Use one multipart request with duplicated browser/server validation
 
 The browser sends exactly one `photo` part to the extraction API. It validates file count, MIME type, and the 10 MiB limit to provide immediate feedback. The route repeats the same checks because browser validation is not a security boundary. The UI also tells the user that an eligible photo contains one to five front-facing covers; cover orientation/count is extraction guidance, not a claim that local file validation can inspect image content.
@@ -80,4 +98,5 @@ This is the first application slice, so there is no data migration. Implementati
 
 ## Open Questions
 
-None at the behavioral-contract level. The concrete AI vendor and model are deployment choices behind the extraction adapter and must be recorded during implementation without exposing credentials or changing this spec.
+None at the behavioral-contract level. OpenAI and the default model are
+deployment choices behind the extraction adapter and do not change this spec.
