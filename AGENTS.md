@@ -22,6 +22,7 @@ Documentation responsibilities:
 - `docs/requirements/*.md` defines detailed feature behavior.
 - `docs/Vocabulary.md` defines shared domain terms.
 - `docs/adr/*.md` explains high-impact technical/product decisions.
+- `docs/current-state.md` records a concise, evidence-based handoff and exact next task; it is not a source of requirements.
 
 Do not duplicate detailed requirements across files.
 Do not treat PRD as a full functional specification.
@@ -30,6 +31,7 @@ Requirement IDs are defined in `docs/requirements/README.md`. OpenSpec changes, 
 
 ## Agent Workflow
 
+- At the start of a new agent window, read `docs/current-state.md` if it exists, then verify its claims against OpenSpec, tests, and the repository before acting.
 - Start new feature discovery and material requirement changes with `$grill-openspec`.
 - Use the grilling session to resolve scope, vocabulary, behavior, edge cases, and acceptance evidence before proposing implementation.
 - Capture resolved decisions only in their canonical owner; do not create competing context or requirement documents.
@@ -43,6 +45,8 @@ Requirement IDs are defined in `docs/requirements/README.md`. OpenSpec changes, 
 - Separate maker and checker passes:
   - Maker creates or modifies specs/code.
   - Checker reviews against PRD, requirements, OpenSpec, and this file.
+- Use `$update-current-state` when an active change, meaningful task progress, validation result, blocker, archive status, or exact next task changes, and before handing work to another agent window.
+- Keep `docs/current-state.md` concise and replace stale status instead of appending a session diary. Never copy detailed requirements into it.
 
 ## MVP Guardrails
 
@@ -77,3 +81,4 @@ Before marking a task complete:
 - Confirm no out-of-scope features were added.
 - Add or update tests for changed behavior.
 - Document intentionally deferred behavior.
+- Refresh `docs/current-state.md` when completion changes the verified progress or next task.
