@@ -23,7 +23,7 @@
 
 ## 5. Accessibility, Privacy, and Completion
 
-- [ ] 5.1 Verify through public UI behavior that upload and candidate-editing controls are labeled, visibly focusable, keyboard-operable, and communicate progress, empty, and error states without color alone (`NFR-A11Y-001`, `NFR-A11Y-002`, `NFR-A11Y-003`).
+- [x] 5.1 Verify through public UI behavior that upload and candidate-editing controls are labeled, visibly focusable, keyboard-operable, and communicate progress, empty, and error states without color alone (`NFR-A11Y-001`, `NFR-A11Y-002`, `NFR-A11Y-003`).
 - [x] 5.2 Verify success and failure paths retain no backend photo, raw provider output, candidate, or Library Book data and never log those contents or credentials (`TC-AI-002`, `BC-PRIVACY-001`).
 - [x] 5.3 Run the full lint, typecheck, and test commands; record evidence by requirement ID and document the intentionally deferred confirmation, saving, Manual Add, duplicate, enrichment, and local-library behaviors.
 - [x] 5.4 Perform a separate checker pass against the PRD, canonical requirements, vocabulary, ADR-002, OpenSpec artifacts, and `AGENTS.md`; resolve scope drift or missing acceptance behavior before completion.

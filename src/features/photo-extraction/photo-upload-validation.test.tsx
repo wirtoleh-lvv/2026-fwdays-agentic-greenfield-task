@@ -25,7 +25,7 @@ describe("photo upload validation", () => {
       "Choose a JPEG, PNG, or WebP photo.",
     );
     expect(
-      screen.getByRole("button", { name: "Extract books" }),
+      screen.getByRole("button", { name: "Find books in photo" }),
     ).toBeDisabled();
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -47,7 +47,7 @@ describe("photo upload validation", () => {
       "Choose a photo no larger than 10 MiB.",
     );
     expect(
-      screen.getByRole("button", { name: "Extract books" }),
+      screen.getByRole("button", { name: "Find books in photo" }),
     ).toBeDisabled();
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -71,7 +71,7 @@ describe("photo upload validation", () => {
       "Choose one photo at a time.",
     );
     expect(
-      screen.getByRole("button", { name: "Extract books" }),
+      screen.getByRole("button", { name: "Find books in photo" }),
     ).toBeDisabled();
     expect(fetchMock).not.toHaveBeenCalled();
   });

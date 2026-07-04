@@ -40,14 +40,18 @@ describe("failed extraction", () => {
       input,
       new File(["photo"], "books.jpg", { type: "image/jpeg" }),
     );
-    await user.click(screen.getByRole("button", { name: "Extract books" }));
+    await user.click(
+      screen.getByRole("button", { name: "Find books in photo" }),
+    );
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Book extraction is temporarily unavailable. Try again.",
     );
     expect(input.files?.[0]?.name).toBe("books.jpg");
 
-    await user.click(screen.getByRole("button", { name: "Extract books" }));
+    await user.click(
+      screen.getByRole("button", { name: "Find books in photo" }),
+    );
 
     expect(await screen.findByLabelText("Title for candidate 1")).toHaveValue(
       "Dune",

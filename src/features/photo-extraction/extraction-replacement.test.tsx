@@ -34,14 +34,19 @@ describe("later extraction", () => {
       input,
       new File(["first"], "first.jpg", { type: "image/jpeg" }),
     );
-    await user.click(screen.getByRole("button", { name: "Extract books" }));
+    await user.click(
+      screen.getByRole("button", { name: "Find books in photo" }),
+    );
     expect(await screen.findByDisplayValue("Old candidate")).toBeInTheDocument();
 
+    await user.click(screen.getByRole("button", { name: "Back to upload" }));
     await user.upload(
-      input,
+      screen.getByLabelText("Book-cover photo"),
       new File(["second"], "second.jpg", { type: "image/jpeg" }),
     );
-    await user.click(screen.getByRole("button", { name: "Extract books" }));
+    await user.click(
+      screen.getByRole("button", { name: "Find books in photo" }),
+    );
 
     expect(screen.queryByDisplayValue("Old candidate")).not.toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent(

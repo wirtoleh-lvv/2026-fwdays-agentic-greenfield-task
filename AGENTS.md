@@ -48,6 +48,13 @@ Requirement IDs are defined in `docs/requirements/README.md`. OpenSpec changes, 
 - Use `$update-current-state` when an active change, meaningful task progress, validation result, blocker, archive status, or exact next task changes, and before handing work to another agent window.
 - Keep `docs/current-state.md` concise and replace stale status instead of appending a session diary. Never copy detailed requirements into it.
 
+## UI Design Source
+
+- Implement user-facing UI from the approved Figma designs and their design system when a matching design exists.
+- Treat Figma and design-system artifacts as the visual source of truth; OpenSpec and canonical requirements remain the behavioral source of truth.
+- Before implementation, identify the exact Figma frame or repository-captured design state and keep the implementation within the active OpenSpec boundary.
+- Verify rendered implementation against the matching design state at the same viewport. Record intentional deviations caused by accessibility, privacy, or approved scope constraints.
+
 ## MVP Guardrails
 
 Preserve the agreed MVP scope.

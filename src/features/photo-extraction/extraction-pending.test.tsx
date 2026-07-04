@@ -25,22 +25,28 @@ describe("pending extraction", () => {
       photoInput,
       new File(["photo"], "books.jpg", { type: "image/jpeg" }),
     );
-    const submit = screen.getByRole("button", { name: "Extract books" });
+    const submit = screen.getByRole("button", {
+      name: "Find books in photo",
+    });
     await user.click(submit);
 
     expect(await screen.findByRole("status")).toHaveTextContent(
       "Extracting books from your photo.",
     );
-    expect(submit).toBeDisabled();
-    expect(photoInput).toBeDisabled();
+    const pendingSubmit = screen.getByRole("button", {
+      name: "Find books in photo",
+    });
+    const pendingPhotoInput = screen.getByLabelText("Book-cover photo");
+    expect(pendingSubmit).toBeDisabled();
+    expect(pendingPhotoInput).toBeDisabled();
 
     await user.upload(
-      photoInput,
+      pendingPhotoInput,
       new File(["second"], "second.jpg", { type: "image/jpeg" }),
     );
     expect(photoInput.files?.[0]?.name).toBe("books.jpg");
 
-    await user.click(submit);
+    await user.click(pendingSubmit);
     expect(fetchMock).toHaveBeenCalledOnce();
 
     resolveRequest(Response.json([]));

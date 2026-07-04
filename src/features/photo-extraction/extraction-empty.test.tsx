@@ -17,13 +17,15 @@ describe("empty extraction result", () => {
       screen.getByLabelText("Book-cover photo"),
       new File(["photo"], "books.jpg", { type: "image/jpeg" }),
     );
-    await user.click(screen.getByRole("button", { name: "Extract books" }));
+    await user.click(
+      screen.getByRole("button", { name: "Find books in photo" }),
+    );
 
     expect(await screen.findByRole("status")).toHaveTextContent(
       "No books were identified. Choose another photo or retry this photo.",
     );
     expect(
-      screen.getByRole("button", { name: "Extract books" }),
+      screen.getByRole("button", { name: "Find books in photo" }),
     ).toBeEnabled();
     expect(screen.queryByRole("heading", { name: /candidate/i })).not.toBeInTheDocument();
   });

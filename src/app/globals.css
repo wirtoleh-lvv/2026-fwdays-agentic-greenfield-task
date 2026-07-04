@@ -1,14 +1,38 @@
 :root {
   color-scheme: light;
-  font-family: Arial, sans-serif;
+  --canvas: #f7f3eb;
+  --surface: #fffdf8;
+  --surface-subtle: #f1ede5;
+  --ink: #26231e;
+  --muted: #736d64;
+  --border: #ddd7cd;
+  --green: #5f805f;
+  --green-hover: #4e704f;
+  --green-disabled: #aebda9;
+  --green-soft: #eef4ea;
+  --error: #be4b27;
+  --error-surface: #f8e9df;
+  --focus: #255b9d;
+  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  background: var(--canvas);
+  color: var(--ink);
 }
 
 * {
   box-sizing: border-box;
 }
 
+html {
+  min-width: 320px;
+  background: var(--canvas);
+}
+
 body {
+  min-height: 100vh;
   margin: 0;
+  background: var(--canvas);
+  color: var(--ink);
 }
 
 button,
@@ -16,7 +40,572 @@ input {
   font: inherit;
 }
 
+button,
+label[for="book-cover-photo"] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  color: inherit;
+}
+
 :focus-visible {
-  outline: 3px solid #1d4ed8;
+  outline: 3px solid var(--focus);
   outline-offset: 3px;
+}
+
+.sr-only,
+.visually-hidden-file {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.site-header {
+  min-height: 64px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255, 253, 248, 0.72);
+}
+
+.site-header-inner {
+  width: min(100% - 48px, 1088px);
+  min-height: 64px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.brand-lockup {
+  display: flex;
+  align-items: baseline;
+  gap: 36px;
+}
+
+.brand-lockup strong {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.brand-lockup span,
+.device-note {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.device-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.device-note svg,
+.privacy-note svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 1.7;
+}
+
+.page-shell {
+  width: min(100% - 40px, 608px);
+  margin: 0 auto;
+  padding: 42px 0 96px;
+}
+
+.review-shell {
+  width: min(100% - 40px, 640px);
+}
+
+.back-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.back-action:hover {
+  color: var(--ink);
+}
+
+.back-action svg {
+  width: 17px;
+  height: 17px;
+}
+
+.page-introduction {
+  margin-top: 28px;
+}
+
+.page-introduction h1,
+.extraction-progress h1 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2rem, 5vw, 2.25rem);
+  font-weight: 500;
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+}
+
+.page-introduction p {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+.photo-form {
+  margin-top: 32px;
+}
+
+.photo-dropzone {
+  min-height: 208px;
+  border: 2px dashed #d5cec3;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 9px;
+  padding: 32px;
+  background: rgba(255, 253, 248, 0.28);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.photo-dropzone:hover {
+  border-color: var(--green);
+  background: var(--surface);
+}
+
+.visually-hidden-file:focus-visible + .photo-dropzone,
+.visually-hidden-file:focus-visible + .selected-photo {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+
+.photo-dropzone svg {
+  width: 38px;
+  height: 38px;
+  margin-bottom: 2px;
+  color: #807a70;
+  stroke-width: 1.8;
+}
+
+.photo-dropzone strong {
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.photo-dropzone span:not(.sr-only) {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.selected-photo {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+}
+
+.selected-photo-preview {
+  position: relative;
+  height: 288px;
+  overflow: hidden;
+  background: var(--surface-subtle);
+}
+
+.selected-photo-preview img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+}
+
+.remove-photo {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  display: grid;
+  place-items: center;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.remove-photo:hover {
+  color: var(--ink);
+}
+
+.remove-photo svg {
+  width: 18px;
+  height: 18px;
+}
+
+.selected-photo-details {
+  min-height: 62px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.selected-photo-details span {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.selected-photo-details strong {
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.selected-photo-details small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.selected-photo-details label {
+  flex: none;
+  color: var(--green-hover);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.message {
+  min-height: 48px;
+  margin-top: 18px;
+  padding: 13px 14px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: var(--surface);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.message p {
+  margin: 0;
+}
+
+.message svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  margin-top: 1px;
+}
+
+.message-error {
+  border-color: #e5b79e;
+  background: var(--error-surface);
+  color: var(--error);
+}
+
+.message-neutral {
+  border-color: #c7d4c1;
+  background: var(--green-soft);
+  color: #3f603f;
+}
+
+.privacy-note,
+.unsaved-note {
+  margin: 22px 0 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.privacy-note svg {
+  flex: none;
+  margin-top: 1px;
+}
+
+.form-actions {
+  margin-top: 24px;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+
+.primary-button,
+.text-button {
+  min-height: 46px;
+  border-radius: 4px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.primary-button {
+  min-width: 186px;
+  padding: 0 20px;
+  border: 1px solid var(--green);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--green);
+  color: #fff;
+}
+
+.primary-button:hover:not(:disabled) {
+  border-color: var(--green-hover);
+  background: var(--green-hover);
+}
+
+.primary-button:disabled {
+  border-color: var(--green-disabled);
+  background: var(--green-disabled);
+  cursor: not-allowed;
+}
+
+.primary-button svg {
+  width: 17px;
+  height: 17px;
+}
+
+.text-button {
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+}
+
+.text-button:hover {
+  color: var(--green-hover);
+}
+
+.extraction-progress-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 40px 20px;
+}
+
+.extraction-progress {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  text-align: center;
+}
+
+.progress-spinner {
+  width: 54px;
+  height: 54px;
+  margin-bottom: 34px;
+  color: var(--green);
+  stroke-width: 1.6;
+  animation: spin 1s linear infinite;
+}
+
+.extraction-progress h1 {
+  font-size: clamp(1.75rem, 5vw, 2rem);
+}
+
+.extraction-progress p {
+  margin: 16px 0 0;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.extraction-progress span {
+  margin-top: 24px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.pending-controls {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress-spinner {
+    animation-duration: 2.5s;
+  }
+}
+
+.review-introduction {
+  margin-bottom: 30px;
+}
+
+.candidate-list {
+  display: grid;
+  gap: 18px;
+}
+
+.candidate-card {
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  display: grid;
+  gap: 9px;
+  background: var(--surface);
+}
+
+.candidate-card-heading {
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.candidate-card-heading h2 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 19px;
+  font-weight: 500;
+}
+
+.candidate-card-heading span {
+  padding: 5px 10px;
+  border: 1px solid #c9d8c3;
+  border-radius: 999px;
+  background: var(--green-soft);
+  color: #4f704f;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.candidate-card label {
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.candidate-card input {
+  width: 100%;
+  height: 44px;
+  padding: 0 13px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: #fffefa;
+  color: var(--ink);
+}
+
+.candidate-card input:hover {
+  border-color: #b7b0a5;
+}
+
+.candidate-card input:focus {
+  border-color: var(--green);
+}
+
+.unsaved-note {
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 640px) {
+  .site-header-inner {
+    width: min(100% - 32px, 1088px);
+  }
+
+  .brand-lockup {
+    gap: 16px;
+  }
+
+  .brand-lockup span {
+    display: none;
+  }
+
+  .device-note {
+    font-size: 12px;
+  }
+
+  .page-shell,
+  .review-shell {
+    width: min(100% - 32px, 640px);
+    padding-top: 28px;
+  }
+
+  .page-introduction {
+    margin-top: 20px;
+  }
+
+  .page-introduction p br {
+    display: none;
+  }
+
+  .photo-form {
+    margin-top: 26px;
+  }
+
+  .photo-dropzone {
+    min-height: 184px;
+    padding: 24px 18px;
+  }
+
+  .selected-photo-preview {
+    height: 220px;
+  }
+
+  .selected-photo-details {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .form-actions {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .primary-button,
+  .text-button {
+    width: 100%;
+  }
+
+  .candidate-card {
+    padding: 18px 16px;
+  }
+
+  .candidate-card-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
 }

@@ -34,12 +34,18 @@ describe("photo extraction keyboard path", () => {
     );
     await user.tab();
     expect(
-      screen.getByRole("button", { name: "Extract books" }),
+      screen.getByRole("button", { name: "Remove selected photo" }),
+    ).toHaveFocus();
+    await user.tab();
+    expect(
+      screen.getByRole("button", { name: "Find books in photo" }),
     ).toHaveFocus();
 
     await user.keyboard("{Enter}");
     const title = await screen.findByLabelText("Title for candidate 1");
 
+    await user.tab();
+    expect(screen.getByRole("button", { name: "Back to upload" })).toHaveFocus();
     await user.tab();
     expect(title).toHaveFocus();
     await user.clear(title);

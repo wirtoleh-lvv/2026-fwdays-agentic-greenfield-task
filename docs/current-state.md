@@ -6,11 +6,11 @@
 
 ## Last Updated
 
-- **Date and time:** 2026-07-04 17:40:44 EEST (+03:00)
-- **Current phase:** Phase 4 — final verification of the first vertical slice
+- **Date and time:** 2026-07-04 18:15:45 EEST (+03:00)
+- **Current phase:** Phase 5 — completed first vertical slice, ready to archive
 - **Active change:** `add-books-from-photo`
-- **Progress:** 14 of 15 OpenSpec tasks are complete. Photo selection, browser and API validation, stateless OpenAI extraction, editable transient candidates, progress, empty, retry, replacement, malformed-output, privacy, and checker behaviors are implemented. The final automated battery passes.
-- **Next task:** Complete task 5.1 by running `$verify-librarian-ui` against the rendered app to verify visible focus, legibility, and progress/empty/error states; the in-app browser was unavailable in the last run.
+- **Progress:** All 15 OpenSpec tasks are complete. The upload-through-editable-candidate interface follows repository-captured Figma Make states 6–10, the full automated battery passes, and the user reported all requested rendered, keyboard-focus, status, editing, and responsive checks passing without findings.
+- **Next task:** Archive `add-books-from-photo` with `$openspec-archive-change` after the completed implementation commit is pushed.
 
 ## Canonical Context
 
@@ -24,7 +24,7 @@ This handoff is non-canonical. Resolve conflicts in favor of:
 
 ## OpenSpec Status
 
-- `add-books-from-photo` is in progress with 14 of 15 tasks complete.
+- `add-books-from-photo` is complete with 15 of 15 tasks checked; it remains active until archived.
 - `openspec validate --all --strict`: passed on 2026-07-04; 1 change passed and 0 failed.
 - Archived changes: none.
 
@@ -33,9 +33,9 @@ This handoff is non-canonical. Resolve conflicts in favor of:
 ### `add-books-from-photo`
 
 - **Implemented:** OpenAI Responses API adapter using configurable `gpt-5.5`, `store: false`, Structured Outputs, original-detail image input, and a 1,200-token output ceiling.
-- **Implemented:** One-photo browser flow, 10 MiB/type validation, authoritative server decoding, editable candidates, accessible pending/empty/error states, retry, and stale-result clearing.
-- **Verified:** Stateless/no-log server paths and a separate OpenSpec, code, and privacy checker pass. Requirement evidence is in `docs/qa/add-books-from-photo-verification.md`.
-- **Remaining:** Rendered visual verification for task 5.1 only.
+- **Implemented:** One-photo browser flow, 10 MiB/type validation, authoritative server decoding, editable candidates, accessible pending/empty/error states, retry, and stale-result clearing. The UI uses the Figma-derived warm editorial design system, responsive upload/review layouts, real transient photo previews, and Lucide icons.
+- **Verified:** Stateless/no-log server paths, post-restyle OpenSpec/code/privacy checker passes, the full automated battery, and a user-reported rendered UI pass. Requirement evidence is in `docs/qa/add-books-from-photo-verification.md`.
+- **Remaining:** No OpenSpec behavior task. `design-qa.md` still records the absence of captured screenshots for repeatable artifact comparison.
 - **Intentionally deferred:** Candidate confirmation and saving, Manual Add, duplicate detection, metadata enrichment, browser library persistence, and library management.
 
 ## Validation
@@ -48,18 +48,17 @@ npm run build
 openspec validate --all --strict
 ```
 
-Latest observed result: all commands pass. Vitest reports 11 files and 23 tests passing; the production build includes `/api/extract-books`.
+Latest observed result: all commands pass. Vitest reports 12 files and 25 tests passing; the production build includes `/api/extract-books`.
 
 ## Environment and Privacy
 
 - Runtime stack: Next.js 16.2.10, React 19.2.7, TypeScript 5.9.3, OpenAI SDK 6.45.0, and Sharp 0.35.3.
 - Provider: OpenAI Responses API; default model `gpt-5.5`, configurable with `OPENAI_VISION_MODEL`.
-- `.env.example` contains placeholders only. A real `OPENAI_API_KEY` must remain in uncommitted `.env.local`; no live-provider request was made during verification.
+- `.env.example` contains placeholders only. A real `OPENAI_API_KEY` must remain in uncommitted `.env.local`; the user reported a successful live-provider extraction on 2026-07-04.
 - The backend has no database, cache, queue, telemetry payload, or file persistence for photos or candidates.
 
 ## Agent Rules and Gotchas
 
-- Do not mark task 5.1 complete from automated DOM tests alone; inspect rendered focus and state presentation.
-- The in-app browser surface was unavailable during the last verification attempt.
+- Task 5.1 was completed from automated evidence plus the user-reported post-restyle manual rendered pass; no implementation screenshots were captured.
 - `npm install` reported two moderate dependency vulnerabilities; no forced audit fix was applied.
-- Do not archive the active change until task 5.1 and final validation pass.
+- The active change is ready to archive after its implementation commit is pushed.

@@ -66,7 +66,9 @@ describe("photo extraction tracer", () => {
       screen.getByLabelText("Book-cover photo"),
       new File([validPng], "books.png", { type: "image/png" }),
     );
-    await user.click(screen.getByRole("button", { name: "Extract books" }));
+    await user.click(
+      screen.getByRole("button", { name: "Find books in photo" }),
+    );
 
     const title = await screen.findByLabelText("Title for candidate 1");
     const authors = screen.getByLabelText("Authors for candidate 1");

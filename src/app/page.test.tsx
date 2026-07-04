@@ -10,7 +10,7 @@ describe("HomePage", () => {
     render(<HomePage />);
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "Librarian" }),
+      screen.getByRole("heading", { level: 1, name: "Add books from a photo" }),
     ).toBeInTheDocument();
     expect(
       screen.getByLabelText("Book-cover photo"),
@@ -19,7 +19,7 @@ describe("HomePage", () => {
       screen.getByText(/one to five front-facing book covers/i),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Extract books" }),
+      screen.getByRole("button", { name: "Find books in photo" }),
     ).toBeDisabled();
 
     await user.upload(
@@ -28,7 +28,7 @@ describe("HomePage", () => {
     );
 
     expect(
-      screen.getByRole("button", { name: "Extract books" }),
+      screen.getByRole("button", { name: "Find books in photo" }),
     ).toBeEnabled();
   });
 });
