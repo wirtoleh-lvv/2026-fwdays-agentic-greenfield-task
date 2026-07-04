@@ -6,36 +6,37 @@
 
 ## Last Updated
 
-- **Date and time:** 2026-07-04 18:15:45 EEST (+03:00)
-- **Current phase:** Phase 5 — completed first vertical slice, ready to archive
-- **Active change:** `add-books-from-photo`
-- **Progress:** All 15 OpenSpec tasks are complete. The upload-through-editable-candidate interface follows repository-captured Figma Make states 6–10, the full automated battery passes, and the user reported all requested rendered, keyboard-focus, status, editing, and responsive checks passing without findings.
-- **Next task:** Archive `add-books-from-photo` with `$openspec-archive-change` after the completed implementation commit is pushed.
+- **Date and time:** 2026-07-04 18:23:59 EEST (+03:00)
+- **Current phase:** Phase 6 — first vertical slice archived; next-feature discovery
+- **Active change:** none
+- **Progress:** `add-books-from-photo` was synchronized into the main `photo-book-extraction` spec and archived as `2026-07-04-add-books-from-photo`. No active OpenSpec changes remain, and strict validation passes for the synchronized main spec.
+- **Next task:** Start `$grill-openspec` for the smallest candidate-review slice before creating its OpenSpec proposal.
 
 ## Canonical Context
 
 This handoff is non-canonical. Resolve conflicts in favor of:
 
 1. `AGENTS.md` — project workflow and guardrails.
-2. `openspec/changes/add-books-from-photo/` — active proposal, design, scenarios, and tasks.
-3. `docs/requirements/*.md` — canonical detailed requirements and stable IDs.
-4. `docs/PRD.md` and `docs/Vocabulary.md` — product context and domain terms.
-5. `docs/adr/ADR-001-local-first-browser-persistence.md` and `docs/adr/ADR-002-thin-stateless-backend-for-ai-extraction.md` — governing architecture decisions.
+2. `openspec/specs/photo-book-extraction/spec.md` — accepted photo-extraction behavior.
+3. `openspec/changes/archive/2026-07-04-add-books-from-photo/` — archived proposal, design, delta spec, and tasks.
+4. `docs/requirements/*.md` — canonical detailed requirements and stable IDs.
+5. `docs/PRD.md` and `docs/Vocabulary.md` — product context and domain terms.
+6. `docs/adr/ADR-001-local-first-browser-persistence.md` and `docs/adr/ADR-002-thin-stateless-backend-for-ai-extraction.md` — governing architecture decisions.
 
 ## OpenSpec Status
 
-- `add-books-from-photo` is complete with 15 of 15 tasks checked; it remains active until archived.
-- `openspec validate --all --strict`: passed on 2026-07-04; 1 change passed and 0 failed.
-- Archived changes: none.
+- Active changes: none.
+- Archived changes: `2026-07-04-add-books-from-photo` with all 15 tasks complete.
+- `openspec validate --all --strict`: passed on 2026-07-04; 1 main spec passed and 0 failed.
 
-## Active Change Progress
+## Archived Change Progress
 
-### `add-books-from-photo`
+### `2026-07-04-add-books-from-photo`
 
 - **Implemented:** OpenAI Responses API adapter using configurable `gpt-5.5`, `store: false`, Structured Outputs, original-detail image input, and a 1,200-token output ceiling.
 - **Implemented:** One-photo browser flow, 10 MiB/type validation, authoritative server decoding, editable candidates, accessible pending/empty/error states, retry, and stale-result clearing. The UI uses the Figma-derived warm editorial design system, responsive upload/review layouts, real transient photo previews, and Lucide icons.
 - **Verified:** Stateless/no-log server paths, post-restyle OpenSpec/code/privacy checker passes, the full automated battery, and a user-reported rendered UI pass. Requirement evidence is in `docs/qa/add-books-from-photo-verification.md`.
-- **Remaining:** No OpenSpec behavior task. `design-qa.md` still records the absence of captured screenshots for repeatable artifact comparison.
+- **Remaining:** No behavior task. The accepted delta was synchronized to `openspec/specs/photo-book-extraction/spec.md` before archive.
 - **Intentionally deferred:** Candidate confirmation and saving, Manual Add, duplicate detection, metadata enrichment, browser library persistence, and library management.
 
 ## Validation
@@ -61,4 +62,4 @@ Latest observed result: all commands pass. Vitest reports 12 files and 25 tests 
 
 - Task 5.1 was completed from automated evidence plus the user-reported post-restyle manual rendered pass; no implementation screenshots were captured.
 - `npm install` reported two moderate dependency vulnerabilities; no forced audit fix was applied.
-- The active change is ready to archive after its implementation commit is pushed.
+- No application code should be added until the next grilled feature has an approved OpenSpec change.
