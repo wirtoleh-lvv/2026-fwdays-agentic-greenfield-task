@@ -75,4 +75,31 @@ describe("photo upload validation", () => {
     ).toBeDisabled();
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it("FR-LIB-002 FR-LIB-003 preserves selected-photo clearing while initial upload Cancel returns control to the caller", async () => {
+    const user = userEvent.setup();
+    const onCancel = vi.fn();
+    render(<PhotoExtractionForm onCancel={onCancel} />);
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(onCancel).toHaveBeenCalledTimes(1);
+
+    await user.upload(
+      screen.getByLabelText("Book-cover photo"),
+      new File(["photo"], "books.jpg", { type: "image/jpeg" }),
+    );
+
+    expect(screen.getByText("books.jpg")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Find books in photo" }),
+    ).toBeEnabled();
+
+    await user.click(screen.getByRole("button", { name: "Remove selected photo" }));
+
+    expect(screen.queryByText("books.jpg")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Find books in photo" }),
+    ).toBeDisabled();
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
 });

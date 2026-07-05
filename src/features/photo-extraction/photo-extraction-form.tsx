@@ -41,9 +41,11 @@ export type ConfirmedCandidate = {
 };
 
 export function PhotoExtractionForm({
+  onCancel = () => undefined,
   onSaveConfirmedBooks = () => undefined,
   existingBooks = [],
 }: {
+  onCancel?: () => void;
   onSaveConfirmedBooks?: (candidates: ConfirmedCandidate[]) => void;
   existingBooks?: LibraryBook[];
 } = {}) {
@@ -525,7 +527,7 @@ export function PhotoExtractionForm({
                   <ChevronRight aria-hidden="true" />
                   Find books in photo
                 </button>
-                <button className="text-button" type="button" onClick={clearPhoto}>
+                <button className="text-button" type="button" onClick={onCancel}>
                   Cancel
                 </button>
               </div>

@@ -9,7 +9,7 @@ transitions.
 ## Requirements
 
 ### Requirement: Load Home Library from browser storage
-The system SHALL load a versioned Home Library from browser storage without a backend request and SHALL present the stored Library Books, or an empty Home Library when no stored collection exists. A valid stored Library Book SHALL contain a stable local id, a title, an author list, and whether the author is explicitly unknown. (`FR-LIB-002`, `FR-LIB-003`, `NFR-PRIV-001`, `TC-STORAGE-001`, `TC-STORAGE-002`)
+The system SHALL load a versioned Home Library from browser storage without a backend request and SHALL present the stored Library Books, or an empty Home Library when no stored collection exists. A valid stored Library Book SHALL contain a stable local id, a title, an author list, and whether the author is explicitly unknown. From Home Library, the user SHALL be able to enter the existing Add books workflow and cancel back to the unchanged Home Library from the initial upload state without any browser-storage read or write. (`FR-LIB-002`, `FR-LIB-003`, `NFR-PRIV-001`, `TC-STORAGE-001`, `TC-STORAGE-002`)
 
 #### Scenario: First local session has no saved books
 - **WHEN** Librarian starts and no Home Library value exists in browser storage
@@ -22,6 +22,10 @@ The system SHALL load a versioned Home Library from browser storage without a ba
 #### Scenario: Add books opens the extraction workflow
 - **WHEN** the user activates Add books from Home Library
 - **THEN** the app opens the existing photo upload workflow without changing stored Library Books
+
+#### Scenario: User cancels the initial Add books upload
+- **WHEN** the user activates Cancel from the initial Add books upload screen before extraction begins
+- **THEN** the app returns to Home Library, preserves the visible collection, performs no browser-storage read or write, and restores focus to Add books
 
 ### Requirement: Save remains separate from confirmation
 The system SHALL expose a separate Save confirmed books action only when at least one candidate is explicitly Confirmed. Activating Confirm SHALL remain transient and SHALL NOT write browser storage. The Save action SHALL exclude undecided and Skipped candidates. (`FR-CONFIRM-003`, `FR-CONFIRM-006`, `FR-LIB-001`)
@@ -106,17 +110,80 @@ After a successful batch write, the system SHALL navigate to Home Library, annou
 - **WHEN** the user reloads Librarian in the same browser profile
 - **THEN** Home Library loads and displays the previously saved Library Books
 
+### Requirement: Remove a saved Library Book permanently
+The system SHALL expose a per-book Remove action and SHALL permanently remove a Library Book only after the user explicitly confirms a dialog that identifies the target. On confirmation or Retry, the system SHALL reload and validate the latest complete browser-local collection, locate the target by stable id, and, when present, persist the remaining collection with exactly one versioned browser-storage write. It SHALL provide no Undo, recycle bin, soft deletion, or backend deletion. (`FR-LIB-005`, `NFR-PRIV-001`, `TC-STORAGE-001`, `TC-STORAGE-002`)
+
+#### Scenario: Remove opens named confirmation without storage access
+- **WHEN** the user activates Remove for a Library Book
+- **THEN** a confirmation dialog identifies that book and explains that removal cannot be undone, without reading or writing browser storage
+
+#### Scenario: Cancellation preserves the collection
+- **WHEN** the user cancels, closes, or presses Escape in the confirmation dialog
+- **THEN** the dialog closes, no browser-storage read or write occurs, and the visible Home Library remains unchanged
+
+#### Scenario: Present target is removed from the latest collection
+- **WHEN** the user confirms removal and the latest valid browser collection contains the target id
+- **THEN** the system removes only that id, preserves every other freshly loaded Library Book, and writes the complete remaining collection exactly once
+
+#### Scenario: Last Library Book is removed
+- **WHEN** successful removal leaves no Library Book in the latest collection
+- **THEN** the system displays the existing empty Home Library without performing any additional write
+
+#### Scenario: Target is already absent
+- **WHEN** the latest valid browser collection no longer contains the confirmed target id
+- **THEN** the system performs no write, closes the dialog, refreshes Home Library from that collection, and reports that the named book is no longer in the library
+
+#### Scenario: Fresh collection cannot be loaded
+- **WHEN** reading or validating the latest browser collection fails during confirmed removal
+- **THEN** the system writes nothing, keeps the dialog and visible Library Book unchanged, reports that the named book was not removed, and offers Retry or Cancel
+
+#### Scenario: Removal write fails
+- **WHEN** writing the complete remaining collection fails
+- **THEN** the system keeps the dialog and visible Library Book unchanged, reports that the named book was not removed, and offers Retry or Cancel without claiming success
+
+#### Scenario: Removal Retry succeeds
+- **WHEN** the user activates Retry and the fresh read plus complete write succeed
+- **THEN** the system completes the same target removal using the newly loaded collection and exits the dialog as a successful removal
+
 ### Requirement: Keep local-save workflow accessible and within scope
-The system SHALL keep Save, duplicate resolution, Retry, Back to review, and Add books controls labeled, keyboard-operable, and visibly focusable, SHALL move focus to a meaningful heading or control after screen transitions, and SHALL communicate duplicate, error, empty, and success states without color alone. This capability SHALL NOT add edit, remove, search, Manual Add, metadata, cover persistence, account, backend-library, or cloud-sync behavior. (`NFR-A11Y-001`, `NFR-A11Y-002`, `NFR-A11Y-003`, `BC-MVP-001`)
+The system SHALL keep Save, duplicate resolution, Retry, Back to review, Add books, initial upload cancellation, per-book Remove, removal confirmation, and removal Retry or Cancel controls labeled, keyboard-operable, and visibly focusable, SHALL move focus to a meaningful heading or control after screen and dialog transitions, and SHALL communicate duplicate, error, empty, removal, and save-success states without color alone. This capability SHALL NOT add edit, search, Manual Add, metadata, cover persistence, account, backend-library, cloud-sync, bulk-removal, or removal-history behavior. (`NFR-A11Y-001`, `NFR-A11Y-002`, `NFR-A11Y-003`, `BC-MVP-001`)
 
 #### Scenario: Keyboard user completes local save
 - **WHEN** a keyboard user moves through Save, Duplicate Review, conflict resolution, and Home Library transitions
 - **THEN** every action is operable, focus remains visible, and focus moves to the resulting screen's meaningful heading or first required control
 
+#### Scenario: Initial upload cancellation restores Home Library focus
+- **WHEN** a keyboard user cancels from the initial Add books upload screen
+- **THEN** focus returns to the Home Library Add books action after the screen transition
+
+#### Scenario: Removal dialog manages focus safely
+- **WHEN** a keyboard user opens removal confirmation
+- **THEN** focus moves into a trapped dialog and initially rests on Cancel rather than the destructive action
+
+#### Scenario: Removal cancellation restores trigger focus
+- **WHEN** the user cancels, closes, or presses Escape in removal confirmation
+- **THEN** focus returns to the Remove action that opened the dialog
+
+#### Scenario: Removal failure focuses recovery
+- **WHEN** a confirmed removal read or write fails
+- **THEN** the failure is announced, Retry receives focus, and Cancel remains keyboard reachable
+
+#### Scenario: Successful removal restores adjacent focus
+- **WHEN** removal succeeds and one or more Library Books remain
+- **THEN** the named removal is announced and focus moves to the next remaining book's Remove action, or the previous remaining book's Remove action when no next book exists
+
+#### Scenario: Last-book removal focuses the empty state
+- **WHEN** successful removal leaves the Home Library empty
+- **THEN** the named removal is announced and focus moves to the empty-library heading
+
+#### Scenario: Already-absent removal is announced
+- **WHEN** confirmed removal finds that the target is already absent
+- **THEN** the no-write outcome is announced by text and focus follows the same adjacent-book or empty-state rule
+
 #### Scenario: Save workflow states are communicated
-- **WHEN** duplicate review, persistence failure, empty Home Library, or save success is displayed
+- **WHEN** duplicate review, persistence failure, empty Home Library, removal outcome, or save success is displayed
 - **THEN** the state is identified by text and structure rather than color alone
 
 #### Scenario: Deferred controls remain absent
 - **WHEN** this capability is rendered
-- **THEN** it exposes no edit, remove, search, Manual Add, metadata, cover-persistence, account, backend-library, or cloud-sync behavior
+- **THEN** it exposes no edit, search, Manual Add, metadata, cover-persistence, account, backend-library, cloud-sync, bulk-removal, or removal-history behavior

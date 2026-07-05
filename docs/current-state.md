@@ -6,52 +6,90 @@
 
 ## Last Updated
 
-- **Date and time:** 2026-07-05 15:18:16 EEST (+03:00)
-- **Current phase:** Phase 11 — removal implementation, visual acceptance pending
+- **Date and time:** 2026-07-05 20:29:56 EEST (+0300)
+- **Current phase:** Phase 13 — add-books return change archived; removal
+  change still awaiting manual acceptance
 - **Active change:** `remove-saved-library-book`
-- **Progress:** 9 of 12 tasks complete; storage, confirmation, focus, success, already-absent, and failure/retry behavior are implemented and covered by focused tests.
-- **Next task:** Complete task 4.1 by manually verifying the rendered remove dialog and failure state against `05-remove-library-book-dialog.png` at desktop and mobile widths.
+- **Progress:** `return-to-library-from-add-books` is implemented, spec-synced,
+  validated, and archived. `remove-saved-library-book` remains at 9 of 12 tasks
+  complete.
+- **Next task:** Complete `remove-saved-library-book` task 4.1 by manually
+  verifying the rendered remove dialog and failure state against
+  `05-remove-library-book-dialog.png` at desktop and mobile widths.
 
 ## Canonical Context
 
-This handoff is non-canonical. Resolve conflicts in favor of `AGENTS.md`, artifacts under `openspec/changes/remove-saved-library-book/`, main specs, the owning files under `docs/requirements/`, `docs/PRD.md`, `docs/Vocabulary.md`, and ADR-001.
+This handoff is non-canonical. Resolve conflicts in favor of `AGENTS.md`,
+artifacts under `openspec/changes/remove-saved-library-book/` and
+`openspec/changes/archive/2026-07-05-return-to-library-from-add-books/`, main
+specs under `openspec/specs/`, `docs/requirements/local-library-management.md`,
+`docs/requirements/non-functional-requirements.md`,
+`docs/requirements/privacy-and-data-retention.md`, `docs/PRD.md`,
+`docs/Vocabulary.md`, and `docs/adr/ADR-001-local-first-browser-persistence.md`.
 
 ## OpenSpec Status
 
-- Active change: `remove-saved-library-book`, 9 of 12 tasks complete; all planning artifacts complete.
-- Archived changes: `2026-07-05-save-confirmed-books-locally`, `2026-07-04-decide-extracted-candidates`, and `2026-07-04-add-books-from-photo`.
-- Main specs: `candidate-decision`, `local-library-save`, and `photo-book-extraction`.
-- `npx openspec validate --all --strict`: observed passing; 4 passed, 0 failed.
+- Active change: `remove-saved-library-book`, 9 / 12 tasks complete; planning
+  artifacts are complete, implementation is present, and manual rendered-UI
+  acceptance plus completion gates remain open.
+- Archived changes observed: `2026-07-05-return-to-library-from-add-books`,
+  `2026-07-05-save-confirmed-books-locally`,
+  `2026-07-04-decide-extracted-candidates`, and
+  `2026-07-04-add-books-from-photo`.
+- Latest strict validation observed: `npx openspec validate --all --strict`
+  passed 5 / 5 items before archiving `return-to-library-from-add-books`.
 
 ## Change Progress
 
-- **Implemented:** permanent named confirmation; fresh-read stable-id removal with one complete write; already-absent no-write refresh; non-destructive Retry; and adjacent/empty-state focus.
-- **Remaining:** manual desktop/mobile presentation acceptance, the completion validation gate, and separate checker passes.
-- **Canonical update:** `FR-LIB-005` now records explicit confirmation, fresh-read removal, one complete write, and the already-absent no-write outcome; verification remains `untested` until implementation evidence exists.
-- **Deferred:** Undo/recycle bin, bulk removal, edit, search, Manual Add, metadata, covers, real-time cross-tab synchronization, accounts, backend persistence, and cloud sync.
+- Archived in `2026-07-05-return-to-library-from-add-books`: initial Add books
+  Cancel now returns to unchanged Home Library without extra storage or backend
+  activity, while Remove selected photo continues to clear only the selected
+  photo. Main `local-library-save` spec already includes that behavior.
+- Current unfinished boundary: `remove-saved-library-book` implementation is
+  still unarchived and still needs task 4.1 manual desktop/mobile dialog review
+  plus tasks 5.1 and 5.2 completion/checker work.
+- Main `local-library-save` spec is already synced for both the archived
+  add-books return change and the still-open removal change.
 
 ## Validation
 
-Latest focused implementation evidence:
+Most recent observed evidence:
 
 ```bash
-npm test -- src/features/home-library/librarian-app.test.tsx src/lib/home-library/storage.test.ts --reporter=dot # passed: 2 files / 19 tests
-npm exec eslint -- src/features/home-library/librarian-app.tsx src/features/home-library/librarian-app.test.tsx src/lib/home-library/storage.ts src/lib/home-library/storage.test.ts # passed
+npm test -- src/features/home-library/librarian-app.test.tsx --reporter=dot # passed: 1 file / 15 tests
+npm test -- src/features/home-library/librarian-app.test.tsx src/features/photo-extraction/photo-upload-validation.test.tsx --reporter=dot # passed: 2 files / 18 tests
+npm exec eslint -- src/features/home-library/librarian-app.tsx src/features/home-library/librarian-app.test.tsx src/features/photo-extraction/photo-extraction-form.tsx src/features/photo-extraction/photo-upload-validation.test.tsx # passed
 npm run typecheck # passed
+npm test -- --reporter=dot # passed: 17 files / 57 tests
+npm run lint # passed
+npm run build # passed
+npx openspec validate --all --strict # passed: 5 items
 ```
 
-The full test, lint, build, and strict OpenSpec completion gate has not run since implementation; it is task 5.1. Latest planning validation before implementation: `npx openspec validate --all --strict` passed 4 / 4 items.
+Checker evidence observed for `return-to-library-from-add-books`: OpenSpec
+compliance audit against the approved change, PRD, canonical requirements,
+vocabulary, ADR-001, changed app seam, and focused tests found no
+contradictions or scope drift.
 
 ## Environment and Privacy
 
-- Home Library records remain browser-only; saving serializes one complete versioned collection with one `setItem` call.
-- Candidate IDs are not persisted as Library Book IDs; local ID generation is injectable for tests.
-- Removal artifacts, implementation, tests, canonical requirement refinement, and this handoff are uncommitted. Never print or commit `.env.local`.
+- Browser-local Home Library persistence remains unchanged; the add-books return
+  change touched only UI state transitions in `LibrarianApp` and
+  `PhotoExtractionForm`.
+- No API route or storage-module edits were made for that archived change.
+- Working tree remains dirty with uncommitted application/test updates, the
+  synced main spec, this handoff refresh, and the new archive directory for
+  `2026-07-05-return-to-library-from-add-books`.
+- `npm run build` observed `.env.local` as an environment source; never print or
+  commit its contents.
 
 ## Agent Rules and Gotchas
 
-- `PhotoExtractionForm` owns transient candidate and duplicate-plan state; `LibrarianApp` owns the loaded Home Library and successful navigation.
-- Removal must re-read and validate storage on every Confirm or Retry; opening or cancelling the dialog performs no storage access.
-- Fresh-read preservation does not provide cross-tab locking across the subsequent read-to-write interval; that race is an explicit non-goal.
-- Reference visual: `docs/audits/librarian-mvp-prototype/screenshots/05-remove-library-book-dialog.png`.
-- A pre-existing Next dev process may still be listening on port 3000 as PID 82181; do not terminate it without user direction.
+- The initial upload-screen Cancel in `PhotoExtractionForm` is now navigation
+  back to Home Library; it is no longer a synonym for clearing transient upload
+  state.
+- Clearing a selected photo still happens through the visible Remove selected
+  photo control, not through the initial Cancel action.
+- Do not confuse the archived add-books return change with the still-open
+  removal change; both modify `local-library-save`, but only removal still needs
+  manual acceptance and completion work.

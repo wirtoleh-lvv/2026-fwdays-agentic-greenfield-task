@@ -18,7 +18,12 @@ import {
 
 type AppState =
   | { kind: "loading" }
-  | { kind: "home"; books: LibraryBook[]; savedCount?: number }
+  | {
+      kind: "home";
+      books: LibraryBook[];
+      savedCount?: number;
+      restoreAddBooksFocus?: boolean;
+    }
   | { kind: "load-error" }
   | { kind: "photo-extraction"; books: LibraryBook[] };
 
@@ -52,6 +57,13 @@ export function LibrarianApp({
     return (
       <PhotoExtractionForm
         existingBooks={state.books}
+        onCancel={() => {
+          setState({
+            kind: "home",
+            books: state.books,
+            restoreAddBooksFocus: true,
+          });
+        }}
         onSaveConfirmedBooks={(candidates) => {
           const books = saveHomeLibrary(
             storage ?? window.localStorage,
@@ -97,6 +109,7 @@ export function LibrarianApp({
     <HomeLibrary
       books={state.books}
       savedCount={state.savedCount}
+      restoreAddBooksFocus={state.restoreAddBooksFocus}
       onRemoveBook={(targetId) => {
         const result = removeHomeLibraryBook(
           storage ?? window.localStorage,
@@ -115,14 +128,17 @@ export function LibrarianApp({
 function HomeLibrary({
   books,
   savedCount,
+  restoreAddBooksFocus = false,
   onAddBooks,
   onRemoveBook,
 }: {
   books: LibraryBook[];
   savedCount?: number;
+  restoreAddBooksFocus?: boolean;
   onAddBooks: () => void;
   onRemoveBook: (targetId: string) => RemoveHomeLibraryBookResult;
 }) {
+  const addBooksButtonRef = useRef<HTMLButtonElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const removalDialogRef = useRef<HTMLElement>(null);
   const removalCancelRef = useRef<HTMLButtonElement>(null);
@@ -140,6 +156,12 @@ function HomeLibrary({
       headingRef.current?.focus();
     }
   }, [savedCount]);
+
+  useEffect(() => {
+    if (restoreAddBooksFocus) {
+      addBooksButtonRef.current?.focus();
+    }
+  }, [restoreAddBooksFocus]);
 
   useEffect(() => {
     if (removalTarget !== null) {
@@ -257,7 +279,12 @@ function HomeLibrary({
             <HardDrive aria-hidden="true" />
             Your data never leaves this browser.
           </p>
-          <button className="primary-button" type="button" onClick={onAddBooks}>
+          <button
+            ref={addBooksButtonRef}
+            className="primary-button"
+            type="button"
+            onClick={onAddBooks}
+          >
             <Plus aria-hidden="true" />
             Add books
           </button>
@@ -277,7 +304,12 @@ function HomeLibrary({
               {books.length} {books.length === 1 ? "book" : "books"}
             </p>
           </div>
-          <button className="primary-button" type="button" onClick={onAddBooks}>
+          <button
+            ref={addBooksButtonRef}
+            className="primary-button"
+            type="button"
+            onClick={onAddBooks}
+          >
             <Plus aria-hidden="true" />
             Add books
           </button>

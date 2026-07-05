@@ -708,8 +708,10 @@ describe("Home Library entry state", () => {
     });
   });
 
-  it("FR-LIB-002 FR-LIB-003 loads empty and populated local libraries and opens Add books without a write", async () => {
+  it("FR-LIB-002 FR-LIB-003 TC-STORAGE-001 returns from the initial Add books upload without extra reads, writes, or fetches", async () => {
     const user = userEvent.setup();
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
     const emptyStorage = {
       getItem: vi.fn().mockReturnValue(null),
       setItem: vi.fn(),
@@ -726,7 +728,13 @@ describe("Home Library entry state", () => {
     expect(
       screen.getByRole("heading", { name: "Add books from a photo" }),
     ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(
+      await screen.findByRole("heading", { name: "Your library is empty" }),
+    ).toBeInTheDocument();
+    expect(emptyStorage.getItem).toHaveBeenCalledTimes(1);
     expect(emptyStorage.setItem).not.toHaveBeenCalled();
+    expect(fetchSpy).not.toHaveBeenCalled();
 
     emptyView.unmount();
 
@@ -750,8 +758,6 @@ describe("Home Library entry state", () => {
       ),
       setItem: vi.fn(),
     };
-    const fetchSpy = vi.fn();
-    vi.stubGlobal("fetch", fetchSpy);
 
     render(<LibrarianApp storage={populatedStorage} />);
 
@@ -762,8 +768,42 @@ describe("Home Library entry state", () => {
     expect(screen.getByText("Octavia E. Butler")).toBeInTheDocument();
     expect(screen.getByText("The Employees")).toBeInTheDocument();
     expect(screen.getByText("Author unknown")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Add books" }));
+    expect(
+      screen.getByRole("heading", { name: "Add books from a photo" }),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(
+      await screen.findByRole("heading", { name: "Home Library" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Parable of the Sower")).toBeInTheDocument();
+    expect(screen.getByText("Octavia E. Butler")).toBeInTheDocument();
+    expect(screen.getByText("The Employees")).toBeInTheDocument();
+    expect(screen.getByText("Author unknown")).toBeInTheDocument();
+    expect(populatedStorage.getItem).toHaveBeenCalledTimes(1);
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(populatedStorage.setItem).not.toHaveBeenCalled();
+  });
+
+  it("NFR-A11Y-001 NFR-A11Y-002 restores focus to Add books after initial upload cancellation", async () => {
+    const user = userEvent.setup();
+    render(
+      <LibrarianApp
+        storage={{
+          getItem: vi.fn().mockReturnValue(null),
+          setItem: vi.fn(),
+        }}
+      />,
+    );
+
+    const addBooks = await screen.findByRole("button", { name: "Add books" });
+    await user.click(addBooks);
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(
+      await screen.findByRole("heading", { name: "Your library is empty" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add books" })).toHaveFocus();
   });
 
   it("FR-LIB-002 NFR-A11Y-003 presents an explicit local-only empty state without deferred controls", async () => {
