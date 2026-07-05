@@ -1,6 +1,6 @@
 # Home Library Design QA
 
-- **Source visual truth:** `docs/audits/librarian-mvp-prototype/screenshots/01-home-library-populated.png` and `15-home-library-empty.png`
+- **Source visual truth:** `docs/audits/librarian-mvp-prototype/screenshots/01-home-library-populated.png`, `12-duplicate-warning.png`, `14-save-success-home-library.png`, and `15-home-library-empty.png`
 - **Implementation URL:** `http://localhost:3000`
 - **Implementation screenshot:** not captured; the configured in-app browser was unavailable
 - **Target viewports:** 1280 × 1000 desktop and a mobile width near 390 px
@@ -40,6 +40,27 @@ the OpenSpec task's rendered evidence requirement. The Product Design artifact
 remains blocked because the user declined automated screenshot capture, so no
 combined source/implementation image comparison exists.
 
+## Duplicate Review And Save-Success Acceptance
+
+On 2026-07-05, the user manually checked Duplicate Review and the save-success
+Home Library at desktop and mobile widths and reported no findings. The check
+used screenshots `12` and `14` as references with these intentional OpenSpec
+deviations:
+
+- Duplicate Review lists every conflict together and requires explicit
+  Save anyway or Exclude choices instead of the prototype's single warning.
+- Back preserves reviewed candidates and prior conflict resolutions; the
+  prototype's state-loss behavior is intentionally not reproduced.
+- Save success shows the complete browser-local collection and saved count,
+  but omits covers, search, edit, remove, Manual Add, and metadata controls.
+- Focus moves to Duplicate Review on entry, back to Save after Back to review,
+  to Retry after a write failure, and to Home Library after success.
+
+The manual acceptance covers readable hierarchy, spacing, wrapping, button
+states, visible focus, and single-column behavior near 390 px. This satisfies
+OpenSpec task 6.2; the separate Product Design screenshot-comparison artifact
+remains blocked because no implementation captures were supplied.
+
 ## Implementation Checklist
 
 - Capture empty and populated states at matched desktop and mobile viewports.
@@ -47,4 +68,4 @@ combined source/implementation image comparison exists.
 - Verify visible focus, text scaling, wrapping, and single-column mobile behavior.
 - Resolve all P0–P2 findings before marking OpenSpec task 2.2 complete.
 
-final result: blocked
+final result: OpenSpec manual acceptance passed; automated screenshot comparison blocked

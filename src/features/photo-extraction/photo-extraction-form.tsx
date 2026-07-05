@@ -49,6 +49,8 @@ export function PhotoExtractionForm({
 } = {}) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const previewUrlRef = useRef<string | null>(null);
+  const saveRetryRef = useRef<HTMLButtonElement>(null);
+  const restoreSaveFocusRef = useRef(false);
   const [photo, setPhoto] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<CandidateDraft[]>([]);
@@ -59,8 +61,24 @@ export function PhotoExtractionForm({
   const [duplicatePlan, setDuplicatePlan] =
     useState<DuplicateReviewPlan | null>(null);
   const [isDuplicateReview, setIsDuplicateReview] = useState(false);
+  const [failedSaveCandidates, setFailedSaveCandidates] = useState<
+    ConfirmedCandidate[] | null
+  >(null);
   const isExtracting = extractionState === "extracting";
   const isReady = extractionState === "ready";
+
+  useEffect(() => {
+    if (failedSaveCandidates !== null) {
+      saveRetryRef.current?.focus();
+    }
+  }, [failedSaveCandidates]);
+
+  useEffect(() => {
+    if (!isDuplicateReview && restoreSaveFocusRef.current) {
+      document.getElementById("save-confirmed-books")?.focus();
+      restoreSaveFocusRef.current = false;
+    }
+  }, [isDuplicateReview]);
 
   useEffect(() => {
     return () => {
@@ -74,6 +92,8 @@ export function PhotoExtractionForm({
   }, []);
 
   function selectPhoto(files: FileList | null) {
+    setFailedSaveCandidates(null);
+
     if (files === null || files.length === 0) {
       clearPhoto();
       return;
@@ -111,6 +131,7 @@ export function PhotoExtractionForm({
   }
 
   function clearPhoto() {
+    setFailedSaveCandidates(null);
     setPhoto(null);
     replacePreviewUrl(null);
     setCandidates([]);
@@ -123,6 +144,7 @@ export function PhotoExtractionForm({
   }
 
   function returnToUpload() {
+    setFailedSaveCandidates(null);
     setCandidates([]);
     setDuplicatePlan(null);
     setIsDuplicateReview(false);
@@ -130,6 +152,7 @@ export function PhotoExtractionForm({
   }
 
   function requestSaveConfirmed(confirmedCandidates: ConfirmedCandidate[]) {
+    setFailedSaveCandidates(null);
     const conflicts = confirmedCandidates.flatMap((candidate) =>
       existingBooks.flatMap((libraryBook) => {
         const category = classifyDuplicate(candidate, libraryBook);
@@ -156,7 +179,17 @@ export function PhotoExtractionForm({
       return;
     }
 
-    onSaveConfirmedBooks(confirmedCandidates);
+    attemptSave(confirmedCandidates);
+  }
+
+  function attemptSave(confirmedCandidates: ConfirmedCandidate[]) {
+    setFailedSaveCandidates(null);
+
+    try {
+      onSaveConfirmedBooks(confirmedCandidates);
+    } catch {
+      setFailedSaveCandidates(confirmedCandidates);
+    }
   }
 
   function handleDrop(event: DragEvent<HTMLLabelElement>) {
@@ -215,6 +248,7 @@ export function PhotoExtractionForm({
     field: "title" | "authorsText",
     value: string,
   ) {
+    setFailedSaveCandidates(null);
     setCandidates((current) =>
       current.map((candidate) =>
         candidate.id === id
@@ -232,6 +266,7 @@ export function PhotoExtractionForm({
   }
 
   function updateAuthorUnknown(id: string, authorUnknown: boolean) {
+    setFailedSaveCandidates(null);
     setCandidates((current) =>
       current.map((candidate) =>
         candidate.id === id ? { ...candidate, authorUnknown } : candidate,
@@ -240,6 +275,7 @@ export function PhotoExtractionForm({
   }
 
   function confirmCandidate(id: string) {
+    setFailedSaveCandidates(null);
     setCandidates((current) =>
       current.map((candidate) =>
         candidate.id === id && deriveCandidateReadiness(candidate).kind === "ready"
@@ -250,6 +286,7 @@ export function PhotoExtractionForm({
   }
 
   function editCandidate(id: string) {
+    setFailedSaveCandidates(null);
     setCandidates((current) =>
       current.map((candidate) =>
         candidate.id === id ? { ...candidate, decision: "undecided" } : candidate,
@@ -258,6 +295,7 @@ export function PhotoExtractionForm({
   }
 
   function skipCandidate(id: string) {
+    setFailedSaveCandidates(null);
     setCandidates((current) =>
       current.map((candidate) =>
         candidate.id === id && candidate.decision === "undecided"
@@ -268,6 +306,7 @@ export function PhotoExtractionForm({
   }
 
   function undoSkip(id: string) {
+    setFailedSaveCandidates(null);
     setCandidates((current) =>
       current.map((candidate) =>
         candidate.id === id ? { ...candidate, decision: "undecided" } : candidate,
@@ -311,11 +350,32 @@ export function PhotoExtractionForm({
               : "page-shell"
         }
       >
+        {failedSaveCandidates === null ? null : (
+          <div className="message message-error" role="alert">
+            <CircleAlert aria-hidden="true" />
+            <div>
+              <p>No books were saved. Browser storage is unavailable.</p>
+              <button
+                ref={saveRetryRef}
+                className="text-button"
+                type="button"
+                onClick={() => attemptSave(failedSaveCandidates)}
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        )}
         {isDuplicateReview && duplicatePlan !== null ? (
           <DuplicateReview
             plan={duplicatePlan}
-            onBack={() => setIsDuplicateReview(false)}
-            onResolve={(conflict, resolution) =>
+            onBack={() => {
+              setFailedSaveCandidates(null);
+              restoreSaveFocusRef.current = true;
+              setIsDuplicateReview(false);
+            }}
+            onResolve={(conflict, resolution) => {
+              setFailedSaveCandidates(null);
               setDuplicatePlan((current) =>
                 current === null
                   ? null
@@ -327,8 +387,8 @@ export function PhotoExtractionForm({
                       },
                     },
               )
-            }
-            onContinue={onSaveConfirmedBooks}
+            }}
+            onContinue={attemptSave}
           />
         ) : isReady ? (
           <CandidateReview
@@ -521,6 +581,7 @@ function DuplicateReview({
   ) => void;
   onContinue: (candidates: ConfirmedCandidate[]) => void;
 }) {
+  const headingRef = useRef<HTMLHeadingElement>(null);
   const allResolved = plan.conflicts.every(
     (conflict) => plan.resolutions[duplicateConflictKey(conflict)] !== undefined,
   );
@@ -539,12 +600,16 @@ function DuplicateReview({
   });
   const isEmpty = allResolved && resolvedCandidates.length === 0;
 
+  useEffect(() => {
+    headingRef.current?.focus();
+  }, []);
+
   return (
     <>
       <div className="duplicate-review-alert" role="status">
         <TriangleAlert aria-hidden="true" />
         <div>
-          <h1>Duplicate Review</h1>
+          <h1 ref={headingRef} tabIndex={-1}>Duplicate Review</h1>
           <p>
             {plan.conflicts.length}{" "}
             {plan.conflicts.length === 1 ? "conflict" : "conflicts"}{" "}
@@ -931,6 +996,7 @@ function CandidateReview({
 
       {confirmedCount > 0 ? (
         <button
+          id="save-confirmed-books"
           className="primary-button save-confirmed-action"
           type="button"
           onClick={() =>
