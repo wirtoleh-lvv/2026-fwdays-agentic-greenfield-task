@@ -1,8 +1,8 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import HomePage from "../../app/page";
 import type { ExtractedBookCandidate } from "../../lib/photo-extraction/contracts";
+import { PhotoExtractionForm } from "./photo-extraction-form";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -14,7 +14,7 @@ async function renderCandidates(candidates: ExtractedBookCandidate[]) {
     "fetch",
     vi.fn().mockResolvedValue(Response.json(candidates)),
   );
-  render(<HomePage />);
+  render(<PhotoExtractionForm />);
 
   await user.upload(
     screen.getByLabelText("Book-cover photo"),
@@ -33,6 +33,66 @@ function candidateCard(position: number) {
 }
 
 describe("candidate decisions", () => {
+  it("FR-CONFIRM-003 FR-CONFIRM-006 FR-LIB-001 keeps confirmation transient and selects only confirmed candidates for Save", async () => {
+    const user = userEvent.setup();
+    const onSaveConfirmedBooks = vi.fn();
+    const storageWrite = vi.spyOn(Storage.prototype, "setItem");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        Response.json([
+          { id: "candidate-1", title: "Dune", authors: ["Frank Herbert"] },
+          {
+            id: "candidate-2",
+            title: "Kindred",
+            authors: ["Octavia E. Butler"],
+          },
+          {
+            id: "candidate-3",
+            title: "Piranesi",
+            authors: ["Susanna Clarke"],
+          },
+        ]),
+      ),
+    );
+    render(
+      <PhotoExtractionForm
+        onSaveConfirmedBooks={onSaveConfirmedBooks}
+      />,
+    );
+
+    await user.upload(
+      screen.getByLabelText("Book-cover photo"),
+      new File(["photo"], "books.jpg", { type: "image/jpeg" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Find books in photo" }),
+    );
+    await screen.findByRole("heading", { name: "Review detected books" });
+
+    expect(
+      screen.queryByRole("button", { name: "Save confirmed books" }),
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getAllByRole("button", { name: "Confirm" })[0]);
+    await user.click(screen.getAllByRole("button", { name: "Skip" })[0]);
+
+    expect(storageWrite).not.toHaveBeenCalled();
+    await user.click(
+      screen.getByRole("button", { name: "Save confirmed books" }),
+    );
+
+    expect(onSaveConfirmedBooks).toHaveBeenCalledWith([
+      {
+        id: "candidate-1",
+        title: "Dune",
+        authors: ["Frank Herbert"],
+        authorUnknown: false,
+      },
+    ]);
+    expect(storageWrite).not.toHaveBeenCalled();
+  });
+
   it("FR-CONFIRM-007 derives readiness from trimmed title and author values", async () => {
     await renderCandidates([
       { id: "ready", title: " Dune ", authors: [" Frank Herbert "] },

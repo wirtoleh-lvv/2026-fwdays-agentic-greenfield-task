@@ -1,5 +1,5 @@
-import { PhotoExtractionForm } from "../features/photo-extraction/photo-extraction-form";
+import { LibrarianApp } from "../features/home-library/librarian-app";
 
 export default function HomePage() {
-  return <PhotoExtractionForm />;
+  return <LibrarianApp />;
 }

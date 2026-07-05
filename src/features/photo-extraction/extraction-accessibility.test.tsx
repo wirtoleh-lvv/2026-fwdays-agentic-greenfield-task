@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import HomePage from "../../app/page";
+import { PhotoExtractionForm } from "./photo-extraction-form";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -22,7 +22,7 @@ describe("photo extraction keyboard path", () => {
         ]),
       ),
     );
-    render(<HomePage />);
+    render(<PhotoExtractionForm />);
 
     await user.tab();
     const photoInput = screen.getByLabelText("Book-cover photo");

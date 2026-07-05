@@ -1,55 +1,50 @@
-# Candidate Decision Design QA
+# Home Library Design QA
 
-- **Source visual truth:** `docs/audits/librarian-mvp-prototype/screenshots/10-candidate-review-initial.png` and `11-candidates-confirmed-and-skipped.png`
+- **Source visual truth:** `docs/audits/librarian-mvp-prototype/screenshots/01-home-library-populated.png` and `15-home-library-empty.png`
 - **Implementation URL:** `http://localhost:3000`
-- **Implementation screenshot:** not captured; the in-app browser was unavailable
-- **Target viewport:** source desktop viewports plus a mobile width near 390 px
-- **States:** editable ready/needs-review candidates and compact confirmed/skipped candidates
-- **Final result:** blocked
+- **Implementation screenshot:** not captured; the configured in-app browser was unavailable
+- **Target viewports:** 1280 × 1000 desktop and a mobile width near 390 px
+- **States:** empty Home Library and populated Home Library
+- **Full-view comparison evidence:** blocked because no implementation screenshot could be captured
+- **Focused comparison evidence:** blocked for the same reason; typography, controls, cards, and mobile wrapping could not be compared in a combined image
 
 ## Findings
 
-- [P1] Rendered visual comparison is unavailable.
-  - **Location:** candidate review at desktop and mobile widths.
-  - **Evidence:** both source screenshots opened successfully, but the configured in-app browser was unavailable, so no current implementation screenshot exists.
-  - **Impact:** fonts, spacing, colors, image crop, icon alignment, copy wrapping, focus visibility, and responsive behavior cannot be accepted from code inspection alone.
-  - **Fix:** capture the implementation at the matching viewport in an authorized browser, combine each capture with its source state, and resolve any P0–P2 differences.
-
-## Open Questions
-
-- Save, Manual Add, duplicate handling, persistence, and Home Library navigation shown in or adjacent to the prototype remain intentionally absent under the approved OpenSpec boundary.
-- Candidate cover thumbnails remain absent because the extraction contract does not return safe cover crops.
-
-## Manual Acceptance
-
-On 2026-07-04, the user confirmed the candidate interactions in the default
-desktop view, the mobile layout, and visible focus across all decision-card
-transformations. This satisfies the OpenSpec rendered checker, but this artifact
-remains blocked because it lacks the required source-and-implementation
-screenshot comparison.
+- [P1] Rendered desktop and mobile comparison is unavailable.
+  - **Location:** empty and populated Home Library states.
+  - **Evidence:** both repository source screenshots opened successfully, but the in-app browser reported unavailable and produced no implementation capture.
+  - **Impact:** responsive layout, typography, spacing, colors, icon alignment, focus visibility, and text wrapping cannot be accepted from tests and CSS inspection alone.
+  - **Fix:** capture both implementation states at matched desktop/mobile viewports in an authorized browser, compare each source and implementation together, then resolve all P0–P2 differences.
 
 ## Required Fidelity Surfaces
 
-- **Fonts and typography:** implementation uses a Georgia display stack and a system sans-serif stack; rendered optical comparison is pending.
-- **Spacing and layout rhythm:** desktop and mobile rules are implemented; rendered comparison is pending.
-- **Colors and tokens:** the warm canvas, neutral surfaces, green actions, and semantic error colors are implemented as CSS tokens; rendered comparison and contrast spot checks are pending.
-- **Image quality and assets:** the selected-photo state uses the real transient object URL; Lucide supplies interface icons. Candidate cover thumbnails are intentionally omitted because the extraction contract does not return safe cover crops.
-- **Copy and content:** readiness, missing-information guidance, unknown-author acknowledgement, decision labels, and counts are implemented; rendered comparison is pending.
-
-## Full-view and Focused Comparison Evidence
-
-Blocked: no implementation screenshot could be captured. Focused comparison of typography, controls, preview crop, and candidate fields therefore could not be performed.
+- **Fonts and typography:** implementation reuses the existing Georgia display and system sans-serif stacks; rendered optical comparison is pending.
+- **Spacing and layout rhythm:** centered empty-state and responsive populated-grid rules are implemented; rendered comparison is pending.
+- **Colors and visual tokens:** existing warm canvas, neutral surfaces, green actions, borders, and focus token are reused; rendered comparison and contrast spot checks are pending.
+- **Image quality and asset fidelity:** interface icons use the existing Lucide dependency. Cover images are intentionally absent because cover persistence is outside the approved scope.
+- **Copy and content:** empty, privacy, count, title, author, and unknown-author text are implemented; search, Manual Add, edit, remove, metadata, and cover UI are intentionally absent.
 
 ## Patches Made
 
-- Added derived readiness badges, missing-information guidance, unknown-author acknowledgement, explicit Confirm/Skip actions, compact Confirmed/Skipped cards, and text counts.
-- Added keyboard focus restoration and a polite live announcement for decision transitions.
-- Moved the unknown-author callout below the author field to match the source layout.
-- Added public UI regression coverage; the current full suite passes 13 files and 32 tests.
+- Added the empty and populated Home Library presentation using existing project tokens and responsive breakpoints.
+- Added explicit local-only privacy text and an accessible saved-books list.
+- Kept Add books functional and preserved the no-write transition into photo extraction.
+- Added public UI coverage for empty/populated loading, local-only presentation, and deferred-control exclusions.
+
+## Manual Acceptance
+
+On 2026-07-05, the user confirmed the empty and populated Home Library at
+desktop and mobile widths, visible keyboard focus, Add books navigation, and
+the absence of search, Manual Add, edit, and remove controls. This satisfies
+the OpenSpec task's rendered evidence requirement. The Product Design artifact
+remains blocked because the user declined automated screenshot capture, so no
+combined source/implementation image comparison exists.
 
 ## Implementation Checklist
 
-- Capture editable and decided states at matching desktop and mobile viewports.
-- Compare each source and implementation capture together, including badges, callout, actions, compact cards, and counts.
-- Verify focus rings, focus movement, and mobile wrapping in rendered pixels.
-- Resolve all P0–P2 findings and change `final result` to `passed` only after re-checking.
+- Capture empty and populated states at matched desktop and mobile viewports.
+- Compare full views and focused typography/control regions in combined images.
+- Verify visible focus, text scaling, wrapping, and single-column mobile behavior.
+- Resolve all P0–P2 findings before marking OpenSpec task 2.2 complete.
+
+final result: blocked

@@ -6,8 +6,13 @@ import HomePage from "./page";
 describe("HomePage", () => {
   it("FR-UPLOAD-001 FR-UPLOAD-002 exposes one eligible photo selection", async () => {
     const user = userEvent.setup();
+    window.localStorage.clear();
 
     render(<HomePage />);
+
+    await user.click(
+      await screen.findByRole("button", { name: "Add books" }),
+    );
 
     expect(
       screen.getByRole("heading", { level: 1, name: "Add books from a photo" }),

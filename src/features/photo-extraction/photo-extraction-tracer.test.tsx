@@ -1,9 +1,9 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import HomePage from "../../app/page";
 import { createExtractBooksHandler } from "../../server/photo-extraction/route-handler";
 import type { BookExtractionProvider } from "../../server/photo-extraction/provider";
+import { PhotoExtractionForm } from "./photo-extraction-form";
 
 const validPng = Uint8Array.from(
   Buffer.from(
@@ -60,7 +60,7 @@ describe("photo extraction tracer", () => {
       }),
     );
 
-    render(<HomePage />);
+    render(<PhotoExtractionForm />);
 
     await user.upload(
       screen.getByLabelText("Book-cover photo"),

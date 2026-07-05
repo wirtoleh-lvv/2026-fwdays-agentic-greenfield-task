@@ -7,12 +7,18 @@ import {
   CircleAlert,
   HardDrive,
   LoaderCircle,
+  TriangleAlert,
   Upload,
   X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { DragEvent, FormEvent } from "react";
 import type { ExtractedBookCandidate } from "../../lib/photo-extraction/contracts";
+import type { LibraryBook } from "../../lib/home-library/storage";
+import {
+  classifyDuplicate,
+  type DuplicateCategory,
+} from "../../lib/home-library/duplicate-classifier";
 import {
   isSupportedPhotoType,
   MAX_PHOTO_BYTES,
@@ -27,7 +33,20 @@ type CandidateDraft = Omit<ExtractedBookCandidate, "authors"> & {
 
 type ExtractionState = "idle" | "extracting" | "ready" | "empty" | "failed";
 
-export function PhotoExtractionForm() {
+export type ConfirmedCandidate = {
+  id: string;
+  title: string;
+  authors: string[];
+  authorUnknown: boolean;
+};
+
+export function PhotoExtractionForm({
+  onSaveConfirmedBooks = () => undefined,
+  existingBooks = [],
+}: {
+  onSaveConfirmedBooks?: (candidates: ConfirmedCandidate[]) => void;
+  existingBooks?: LibraryBook[];
+} = {}) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const previewUrlRef = useRef<string | null>(null);
   const [photo, setPhoto] = useState<File | null>(null);
@@ -37,6 +56,9 @@ export function PhotoExtractionForm() {
   const [extractionError, setExtractionError] = useState<string | null>(null);
   const [extractionState, setExtractionState] =
     useState<ExtractionState>("idle");
+  const [duplicatePlan, setDuplicatePlan] =
+    useState<DuplicateReviewPlan | null>(null);
+  const [isDuplicateReview, setIsDuplicateReview] = useState(false);
   const isExtracting = extractionState === "extracting";
   const isReady = extractionState === "ready";
 
@@ -102,7 +124,39 @@ export function PhotoExtractionForm() {
 
   function returnToUpload() {
     setCandidates([]);
+    setDuplicatePlan(null);
+    setIsDuplicateReview(false);
     setExtractionState("idle");
+  }
+
+  function requestSaveConfirmed(confirmedCandidates: ConfirmedCandidate[]) {
+    const conflicts = confirmedCandidates.flatMap((candidate) =>
+      existingBooks.flatMap((libraryBook) => {
+        const category = classifyDuplicate(candidate, libraryBook);
+
+        return category === null
+          ? []
+          : [{ candidate, libraryBook, category }];
+      }),
+    );
+
+    if (conflicts.length > 0) {
+      setDuplicatePlan((current) => ({
+        candidates: confirmedCandidates,
+        conflicts,
+        resolutions: Object.fromEntries(
+          conflicts.flatMap((conflict) => {
+            const key = duplicateConflictKey(conflict);
+            const resolution = current?.resolutions[key];
+            return resolution === undefined ? [] : [[key, resolution]];
+          }),
+        ),
+      }));
+      setIsDuplicateReview(true);
+      return;
+    }
+
+    onSaveConfirmedBooks(confirmedCandidates);
   }
 
   function handleDrop(event: DragEvent<HTMLLabelElement>) {
@@ -248,8 +302,35 @@ export function PhotoExtractionForm() {
   return (
     <>
       <SiteHeader />
-      <main className={isReady ? "page-shell review-shell" : "page-shell"}>
-        {isReady ? (
+      <main
+        className={
+          isDuplicateReview && duplicatePlan !== null
+            ? "page-shell duplicate-review-shell"
+            : isReady
+              ? "page-shell review-shell"
+              : "page-shell"
+        }
+      >
+        {isDuplicateReview && duplicatePlan !== null ? (
+          <DuplicateReview
+            plan={duplicatePlan}
+            onBack={() => setIsDuplicateReview(false)}
+            onResolve={(conflict, resolution) =>
+              setDuplicatePlan((current) =>
+                current === null
+                  ? null
+                  : {
+                      ...current,
+                      resolutions: {
+                        ...current.resolutions,
+                        [duplicateConflictKey(conflict)]: resolution,
+                      },
+                    },
+              )
+            }
+            onContinue={onSaveConfirmedBooks}
+          />
+        ) : isReady ? (
           <CandidateReview
             candidates={candidates}
             onBack={returnToUpload}
@@ -259,6 +340,7 @@ export function PhotoExtractionForm() {
             onEdit={editCandidate}
             onSkip={skipCandidate}
             onUndo={undoSkip}
+            onSaveConfirmedBooks={requestSaveConfirmed}
           />
         ) : (
           <>
@@ -411,7 +493,158 @@ export function PhotoExtractionForm() {
   }
 }
 
-function SiteHeader() {
+type DuplicateConflict = {
+  candidate: ConfirmedCandidate;
+  libraryBook: LibraryBook;
+  category: DuplicateCategory;
+};
+
+type DuplicateResolution = "save-anyway" | "exclude";
+
+type DuplicateReviewPlan = {
+  candidates: ConfirmedCandidate[];
+  conflicts: DuplicateConflict[];
+  resolutions: Record<string, DuplicateResolution>;
+};
+
+function DuplicateReview({
+  plan,
+  onBack,
+  onResolve,
+  onContinue,
+}: {
+  plan: DuplicateReviewPlan;
+  onBack: () => void;
+  onResolve: (
+    conflict: DuplicateConflict,
+    resolution: DuplicateResolution,
+  ) => void;
+  onContinue: (candidates: ConfirmedCandidate[]) => void;
+}) {
+  const allResolved = plan.conflicts.every(
+    (conflict) => plan.resolutions[duplicateConflictKey(conflict)] !== undefined,
+  );
+  const resolvedCandidates = plan.candidates.filter((candidate) => {
+    const candidateConflicts = plan.conflicts.filter(
+      (conflict) => conflict.candidate.id === candidate.id,
+    );
+
+    return (
+      candidateConflicts.length === 0 ||
+      candidateConflicts.every(
+        (conflict) =>
+          plan.resolutions[duplicateConflictKey(conflict)] === "save-anyway",
+      )
+    );
+  });
+  const isEmpty = allResolved && resolvedCandidates.length === 0;
+
+  return (
+    <>
+      <div className="duplicate-review-alert" role="status">
+        <TriangleAlert aria-hidden="true" />
+        <div>
+          <h1>Duplicate Review</h1>
+          <p>
+            {plan.conflicts.length}{" "}
+            {plan.conflicts.length === 1 ? "conflict" : "conflicts"}{" "}
+            found. Review every match before saving.
+          </p>
+        </div>
+      </div>
+
+      <div className="duplicate-conflict-list">
+        {plan.conflicts.map((conflict) => {
+          const categoryLabel =
+            conflict.category === "duplicate"
+              ? "Duplicate"
+              : "Possible Duplicate";
+          const key = duplicateConflictKey(conflict);
+          const resolution = plan.resolutions[key];
+          const candidateTitle = conflict.candidate.title.trim();
+
+          return (
+            <section
+              className="duplicate-conflict"
+              key={key}
+              aria-label={`${categoryLabel} conflict for ${candidateTitle}`}
+            >
+              <span className="duplicate-category">{categoryLabel}</span>
+              <div className="duplicate-records">
+                <div>
+                  <small>Confirmed candidate</small>
+                  <strong>{candidateTitle}</strong>
+                  <span>{displayAuthors(conflict.candidate)}</span>
+                </div>
+                <div>
+                  <small>Already in your library</small>
+                  <strong>{conflict.libraryBook.title}</strong>
+                  <span>{displayAuthors(conflict.libraryBook)}</span>
+                </div>
+              </div>
+              <div className="duplicate-resolution" role="group" aria-label={`Resolution for ${candidateTitle}`}>
+                <button
+                  type="button"
+                  aria-label={`Save anyway for ${candidateTitle}`}
+                  aria-pressed={resolution === "save-anyway"}
+                  onClick={() => onResolve(conflict, "save-anyway")}
+                >
+                  Save anyway
+                </button>
+                <button
+                  type="button"
+                  aria-label={`Exclude ${candidateTitle}`}
+                  aria-pressed={resolution === "exclude"}
+                  onClick={() => onResolve(conflict, "exclude")}
+                >
+                  Exclude
+                </button>
+              </div>
+            </section>
+          );
+        })}
+      </div>
+
+      {isEmpty ? (
+        <p className="message message-neutral">No books remain in this save batch.</p>
+      ) : null}
+
+      <div className="duplicate-review-actions">
+        <button
+          className="back-action"
+          type="button"
+          onClick={onBack}
+        >
+          <ArrowLeft aria-hidden="true" />
+          Back to review
+        </button>
+        <button
+          className="primary-button"
+          type="button"
+          disabled={!allResolved || resolvedCandidates.length === 0}
+          onClick={() => onContinue(resolvedCandidates)}
+        >
+          Save resolved books
+        </button>
+      </div>
+    </>
+  );
+}
+
+function duplicateConflictKey(conflict: DuplicateConflict): string {
+  return `${conflict.candidate.id}-${conflict.libraryBook.id}`;
+}
+
+function displayAuthors(record: {
+  authors: string[];
+  authorUnknown: boolean;
+}): string {
+  return record.authorUnknown || record.authors.length === 0
+    ? "Author unknown"
+    : record.authors.join(", ");
+}
+
+export function SiteHeader() {
   return (
     <header className="site-header">
       <div className="site-header-inner">
@@ -437,6 +670,7 @@ function CandidateReview({
   onEdit,
   onSkip,
   onUndo,
+  onSaveConfirmedBooks,
 }: {
   candidates: CandidateDraft[];
   onBack: () => void;
@@ -450,6 +684,7 @@ function CandidateReview({
   onEdit: (id: string) => void;
   onSkip: (id: string) => void;
   onUndo: (id: string) => void;
+  onSaveConfirmedBooks: (candidates: ConfirmedCandidate[]) => void;
 }) {
   const bookWord = candidates.length === 1 ? "book" : "books";
   const pendingFocusId = useRef<string | null>(null);
@@ -694,11 +929,39 @@ function CandidateReview({
         {confirmedCount} confirmed · {skippedCount} skipped
       </p>
 
+      {confirmedCount > 0 ? (
+        <button
+          className="primary-button save-confirmed-action"
+          type="button"
+          onClick={() =>
+            onSaveConfirmedBooks(
+              candidates
+                .filter((candidate) => candidate.decision === "confirmed")
+                .map(toConfirmedCandidate),
+            )
+          }
+        >
+          Save confirmed books
+        </button>
+      ) : null}
+
       <p className="unsaved-note">
         These candidates are editable and have not been saved to your library.
       </p>
     </>
   );
+}
+
+function toConfirmedCandidate(candidate: CandidateDraft): ConfirmedCandidate {
+  return {
+    id: candidate.id,
+    title: candidate.title,
+    authors: candidate.authorsText
+      .split(",")
+      .map((author) => author.trim())
+      .filter((author) => author.length > 0),
+    authorUnknown: candidate.authorUnknown,
+  };
 }
 
 function deriveCandidateReadiness(candidate: CandidateDraft) {

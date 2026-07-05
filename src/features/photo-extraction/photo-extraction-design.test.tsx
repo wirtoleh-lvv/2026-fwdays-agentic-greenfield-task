@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import HomePage from "../../app/page";
+import { PhotoExtractionForm } from "./photo-extraction-form";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -9,7 +9,7 @@ afterEach(() => {
 
 describe("Figma-derived photo extraction presentation", () => {
   it("FR-UPLOAD-001 FR-UPLOAD-002 NFR-A11Y-002 presents the upload state with clear guidance and privacy context", () => {
-    render(<HomePage />);
+    render(<PhotoExtractionForm />);
 
     expect(
       screen.getByRole("heading", { level: 1, name: "Add books from a photo" }),
@@ -39,7 +39,7 @@ describe("Figma-derived photo extraction presentation", () => {
         ]),
       ),
     );
-    render(<HomePage />);
+    render(<PhotoExtractionForm />);
 
     await user.upload(
       screen.getByLabelText("Book-cover photo"),

@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import HomePage from "../../app/page";
+import { PhotoExtractionForm } from "./photo-extraction-form";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -11,7 +11,7 @@ describe("empty extraction result", () => {
   it("FR-EXTRACT-002 FR-EXTRACT-003 reports no identified books and keeps retry available", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json([])));
-    render(<HomePage />);
+    render(<PhotoExtractionForm />);
 
     await user.upload(
       screen.getByLabelText("Book-cover photo"),

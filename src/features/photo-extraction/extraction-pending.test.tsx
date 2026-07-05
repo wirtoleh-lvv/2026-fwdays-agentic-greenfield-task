@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import HomePage from "../../app/page";
+import { PhotoExtractionForm } from "./photo-extraction-form";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -16,7 +16,7 @@ describe("pending extraction", () => {
     });
     const fetchMock = vi.fn().mockReturnValue(request);
     vi.stubGlobal("fetch", fetchMock);
-    render(<HomePage />);
+    render(<PhotoExtractionForm />);
 
     const photoInput = screen.getByLabelText(
       "Book-cover photo",
