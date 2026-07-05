@@ -12,12 +12,26 @@ export type HomeLibraryStorage = Pick<Storage, "getItem"> &
 
 export type LibraryBookInput = Omit<LibraryBook, "id">;
 
+export type RemoveHomeLibraryBookResult = {
+  outcome: "removed" | "already-absent";
+  books: LibraryBook[];
+};
+
 export class HomeLibraryLoadError extends Error {
   readonly retryable = true;
 
   constructor(options?: ErrorOptions) {
     super("Home Library could not be loaded.", options);
     this.name = "HomeLibraryLoadError";
+  }
+}
+
+export class HomeLibraryWriteError extends Error {
+  readonly retryable = true;
+
+  constructor(options?: ErrorOptions) {
+    super("Home Library could not be updated.", options);
+    this.name = "HomeLibraryWriteError";
   }
 }
 
@@ -72,6 +86,32 @@ export function saveHomeLibrary(
     JSON.stringify({ version: 1, books }),
   );
   return books;
+}
+
+export function removeHomeLibraryBook(
+  storage: HomeLibraryStorage,
+  targetId: string,
+): RemoveHomeLibraryBookResult {
+  const latestBooks = loadHomeLibrary(storage);
+
+  if (!latestBooks.some((book) => book.id === targetId)) {
+    return { outcome: "already-absent", books: latestBooks };
+  }
+
+  if (storage.setItem === undefined) {
+    throw new HomeLibraryWriteError();
+  }
+
+  const books = latestBooks.filter((book) => book.id !== targetId);
+  try {
+    storage.setItem(
+      HOME_LIBRARY_STORAGE_KEY,
+      JSON.stringify({ version: 1, books }),
+    );
+  } catch (error) {
+    throw new HomeLibraryWriteError({ cause: error });
+  }
+  return { outcome: "removed", books };
 }
 
 function isHomeLibraryEnvelope(value: unknown): value is HomeLibraryEnvelope {

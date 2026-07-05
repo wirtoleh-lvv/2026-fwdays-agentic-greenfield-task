@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LibrarianApp } from "./librarian-app";
@@ -8,6 +8,309 @@ afterEach(() => {
 });
 
 describe("Home Library entry state", () => {
+  it("FR-LIB-005 NFR-A11Y-003 removes from the fresh collection and focuses the next remaining book", async () => {
+    const user = userEvent.setup();
+    const target = {
+      id: "book-1",
+      title: "The Left Hand of Darkness",
+      authors: ["Ursula K. Le Guin"],
+      authorUnknown: false,
+    };
+    const nextBook = {
+      id: "book-2",
+      title: "Kindred",
+      authors: ["Octavia E. Butler"],
+      authorUnknown: false,
+    };
+    const freshlyAddedBook = {
+      id: "book-3",
+      title: "Piranesi",
+      authors: ["Susanna Clarke"],
+      authorUnknown: false,
+    };
+    let storedValue = JSON.stringify({ version: 1, books: [target, nextBook] });
+    const storage = {
+      getItem: vi
+        .fn()
+        .mockImplementationOnce(() => storedValue)
+        .mockImplementation(() =>
+          JSON.stringify({
+            version: 1,
+            books: [target, nextBook, freshlyAddedBook],
+          }),
+        ),
+      setItem: vi.fn((_key: string, value: string) => {
+        storedValue = value;
+      }),
+    };
+    render(<LibrarianApp storage={storage} />);
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Remove The Left Hand of Darkness",
+      }),
+    );
+    const dialog = screen.getByRole("dialog", { name: "Remove book" });
+    await user.click(within(dialog).getByRole("button", { name: "Remove" }));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.queryByText("The Left Hand of Darkness")).not.toBeInTheDocument();
+    expect(screen.getByText("Kindred")).toBeInTheDocument();
+    expect(screen.getByText("Piranesi")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "“The Left Hand of Darkness” removed from your library.",
+    );
+    expect(screen.getByRole("button", { name: "Remove Kindred" })).toHaveFocus();
+    expect(storage.setItem).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(storedValue)).toEqual({
+      version: 1,
+      books: [nextBook, freshlyAddedBook],
+    });
+  });
+
+  it("FR-LIB-005 NFR-A11Y-003 removes the last book and focuses the empty-state heading", async () => {
+    const user = userEvent.setup();
+    const book = {
+      id: "book-1",
+      title: "Kindred",
+      authors: ["Octavia E. Butler"],
+      authorUnknown: false,
+    };
+    let storedValue = JSON.stringify({ version: 1, books: [book] });
+    const storage = {
+      getItem: vi.fn(() => storedValue),
+      setItem: vi.fn((_key: string, value: string) => {
+        storedValue = value;
+      }),
+    };
+    render(<LibrarianApp storage={storage} />);
+
+    await user.click(
+      await screen.findByRole("button", { name: "Remove Kindred" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+
+    const emptyHeading = screen.getByRole("heading", {
+      name: "Your library is empty",
+    });
+    expect(emptyHeading).toHaveFocus();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "“Kindred” removed from your library.",
+    );
+    expect(storage.setItem).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(storedValue)).toEqual({ version: 1, books: [] });
+  });
+
+  it("FR-LIB-005 NFR-A11Y-003 refreshes without writing when the target is already absent", async () => {
+    const user = userEvent.setup();
+    const target = {
+      id: "book-1",
+      title: "Kindred",
+      authors: ["Octavia E. Butler"],
+      authorUnknown: false,
+    };
+    const nextBook = {
+      id: "book-2",
+      title: "Piranesi",
+      authors: ["Susanna Clarke"],
+      authorUnknown: false,
+    };
+    const freshBook = {
+      id: "book-3",
+      title: "Beloved",
+      authors: ["Toni Morrison"],
+      authorUnknown: false,
+    };
+    const storage = {
+      getItem: vi
+        .fn()
+        .mockReturnValueOnce(
+          JSON.stringify({ version: 1, books: [target, nextBook] }),
+        )
+        .mockReturnValue(
+          JSON.stringify({ version: 1, books: [nextBook, freshBook] }),
+        ),
+      setItem: vi.fn(),
+    };
+    render(<LibrarianApp storage={storage} />);
+
+    await user.click(
+      await screen.findByRole("button", { name: "Remove Kindred" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+
+    expect(storage.setItem).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.queryByText("Kindred")).not.toBeInTheDocument();
+    expect(screen.getByText("Piranesi")).toBeInTheDocument();
+    expect(screen.getByText("Beloved")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "“Kindred” is no longer in your library.",
+    );
+    expect(screen.getByRole("button", { name: "Remove Piranesi" })).toHaveFocus();
+  });
+
+  it("FR-FAIL-004 NFR-A11Y-001 NFR-A11Y-003 keeps the dialog unchanged after a read failure and retries the same removal", async () => {
+    const user = userEvent.setup();
+    const book = {
+      id: "book-1",
+      title: "Kindred",
+      authors: ["Octavia E. Butler"],
+      authorUnknown: false,
+    };
+    let storedValue = JSON.stringify({ version: 1, books: [book] });
+    const storage = {
+      getItem: vi
+        .fn()
+        .mockImplementationOnce(() => storedValue)
+        .mockImplementationOnce(() => {
+          throw new DOMException("Storage unavailable", "SecurityError");
+        })
+        .mockImplementation(() => storedValue),
+      setItem: vi.fn((_key: string, value: string) => {
+        storedValue = value;
+      }),
+    };
+    render(<LibrarianApp storage={storage} />);
+
+    await user.click(
+      await screen.findByRole("button", { name: "Remove Kindred" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+
+    const dialog = screen.getByRole("dialog", { name: "Remove book" });
+    expect(within(dialog).getByRole("alert")).toHaveTextContent(
+      "“Kindred” was not removed.",
+    );
+    expect(within(dialog).getByRole("button", { name: "Retry" })).toHaveFocus();
+    expect(within(dialog).getByRole("button", { name: "Cancel" })).toBeEnabled();
+    expect(screen.getByRole("list", { name: "Saved books" })).toHaveTextContent(
+      "Kindred",
+    );
+    expect(storage.setItem).not.toHaveBeenCalled();
+
+    await user.click(within(dialog).getByRole("button", { name: "Retry" }));
+
+    expect(storage.getItem).toHaveBeenCalledTimes(3);
+    expect(storage.setItem).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Your library is empty" })).toHaveFocus();
+  });
+
+  it("FR-FAIL-004 keeps the visible library unchanged after a write failure", async () => {
+    const user = userEvent.setup();
+    const book = {
+      id: "book-1",
+      title: "Kindred",
+      authors: ["Octavia E. Butler"],
+      authorUnknown: false,
+    };
+    const storedValue = JSON.stringify({ version: 1, books: [book] });
+    const storage = {
+      getItem: vi.fn(() => storedValue),
+      setItem: vi.fn(() => {
+        throw new DOMException("Storage full", "QuotaExceededError");
+      }),
+    };
+    render(<LibrarianApp storage={storage} />);
+
+    await user.click(
+      await screen.findByRole("button", { name: "Remove Kindred" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+
+    expect(screen.getByRole("dialog", { name: "Remove book" })).toBeInTheDocument();
+    expect(screen.getByRole("list", { name: "Saved books" })).toHaveTextContent(
+      "Kindred",
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "“Kindred” was not removed.",
+    );
+    expect(storage.setItem).toHaveBeenCalledTimes(1);
+  });
+
+  it("FR-LIB-005 NFR-A11Y-001 NFR-A11Y-002 traps dialog focus and cancels without storage access", async () => {
+    const user = userEvent.setup();
+    const book = {
+      id: "book-1",
+      title: "Kindred",
+      authors: ["Octavia E. Butler"],
+      authorUnknown: false,
+    };
+    const storage = {
+      getItem: vi.fn().mockReturnValue(
+        JSON.stringify({ version: 1, books: [book] }),
+      ),
+      setItem: vi.fn(),
+    };
+    render(<LibrarianApp storage={storage} />);
+
+    const remove = await screen.findByRole("button", { name: "Remove Kindred" });
+    storage.getItem.mockClear();
+    await user.click(remove);
+
+    const cancel = screen.getByRole("button", { name: "Cancel" });
+    expect(cancel).toHaveFocus();
+    await user.tab();
+    expect(screen.getByRole("button", { name: "Close remove dialog" })).toHaveFocus();
+    await user.tab({ shift: true });
+    expect(cancel).toHaveFocus();
+
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(remove).toHaveFocus();
+
+    await user.click(remove);
+    await user.click(screen.getByRole("button", { name: "Close remove dialog" }));
+    expect(remove).toHaveFocus();
+
+    await user.click(remove);
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(remove).toHaveFocus();
+    expect(storage.getItem).not.toHaveBeenCalled();
+    expect(storage.setItem).not.toHaveBeenCalled();
+  });
+
+  it("FR-LIB-005 NFR-A11Y-002 opens a named irreversible confirmation for each book without storage access", async () => {
+    const user = userEvent.setup();
+    const books = [
+      {
+        id: "book-1",
+        title: "The Left Hand of Darkness",
+        authors: ["Ursula K. Le Guin"],
+        authorUnknown: false,
+      },
+      {
+        id: "book-2",
+        title: "The Employees",
+        authors: [],
+        authorUnknown: true,
+      },
+    ];
+    const storage = {
+      getItem: vi.fn().mockReturnValue(JSON.stringify({ version: 1, books })),
+      setItem: vi.fn(),
+    };
+    render(<LibrarianApp storage={storage} />);
+
+    await screen.findByRole("heading", { name: "Home Library" });
+    expect(screen.getAllByRole("button", { name: /^Remove / })).toHaveLength(2);
+    storage.getItem.mockClear();
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Remove The Left Hand of Darkness",
+      }),
+    );
+
+    const dialog = screen.getByRole("dialog", { name: "Remove book" });
+    expect(within(dialog).getByText("The Left Hand of Darkness")).toBeInTheDocument();
+    expect(within(dialog).getByText("Ursula K. Le Guin")).toBeInTheDocument();
+    expect(within(dialog).getByText("This cannot be undone.")).toBeInTheDocument();
+    expect(storage.getItem).not.toHaveBeenCalled();
+    expect(storage.setItem).not.toHaveBeenCalled();
+  });
+
   it("FR-FAIL-004 reports a local load failure without overwriting data and retries", async () => {
     const user = userEvent.setup();
     const storedBook = {

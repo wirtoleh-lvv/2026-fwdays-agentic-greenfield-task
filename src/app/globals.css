@@ -356,6 +356,11 @@ button {
   box-shadow: 0 2px 8px rgba(38, 35, 30, 0.05);
 }
 
+.home-library-book-copy {
+  display: grid;
+  gap: 6px;
+}
+
 .home-library-list strong {
   font-family: Georgia, "Times New Roman", serif;
   font-size: 18px;
@@ -367,6 +372,128 @@ button {
   color: var(--muted);
   font-size: 13px;
   line-height: 1.4;
+}
+
+.remove-book-action {
+  width: fit-content;
+  margin-top: 12px;
+  padding: 4px 0;
+  border: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: transparent;
+  color: var(--error);
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.remove-book-action svg,
+.destructive-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.remove-dialog-backdrop {
+  position: fixed;
+  z-index: 20;
+  inset: 0;
+  padding: 24px;
+  display: grid;
+  place-items: center;
+  background: rgba(38, 35, 30, 0.24);
+  backdrop-filter: blur(3px);
+}
+
+.remove-dialog {
+  width: min(100%, 384px);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  box-shadow: 0 18px 50px rgba(38, 35, 30, 0.22);
+}
+
+.remove-dialog > header {
+  min-height: 60px;
+  padding: 0 22px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.remove-dialog h2 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.remove-dialog > header button {
+  width: 38px;
+  height: 38px;
+  margin-right: -10px;
+  padding: 0;
+  border: 0;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.remove-dialog > header svg {
+  width: 18px;
+  height: 18px;
+}
+
+.remove-dialog-body {
+  padding: 22px;
+}
+
+.remove-dialog-body p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.remove-dialog-body p + p {
+  margin-top: 18px;
+}
+
+.remove-dialog-body p span,
+.remove-dialog-warning {
+  color: var(--muted);
+}
+
+.remove-dialog-actions {
+  margin-top: 24px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.destructive-button {
+  min-height: 44px;
+  padding: 0 17px;
+  border: 1px solid var(--error);
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--error);
+  color: #fff;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.destructive-button:hover {
+  border-color: #9f3e20;
+  background: #9f3e20;
 }
 
 .back-action {
