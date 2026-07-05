@@ -31,7 +31,7 @@ Requirement IDs are defined in `docs/requirements/README.md`. OpenSpec changes, 
 
 ## Agent Workflow
 
-- At the start of a new agent window, read `docs/current-state.md` if it exists, then verify its claims against OpenSpec, tests, and the repository before acting.
+- At the start of a new agent window, read `docs/current-state.md` if it exists and use it as an index. Verify the active change, exact next task, and working-tree state before acting; verify broader historical claims only when they affect the task or appear stale or inconsistent.
 - Start new feature discovery and material requirement changes with `$grill-openspec`.
 - Use the grilling session to resolve scope, vocabulary, behavior, edge cases, and acceptance evidence before proposing implementation.
 - Capture resolved decisions only in their canonical owner; do not create competing context or requirement documents.
@@ -41,12 +41,26 @@ Requirement IDs are defined in `docs/requirements/README.md`. OpenSpec changes, 
 - Keep each change focused on one capability.
 - Apply approved changes with `$openspec-tdd`: one failing behavior test, minimal implementation, then behavior-preserving refactoring before the next scenario.
 - Test through public seams, mock only external system boundaries, and reference applicable requirement IDs in verification evidence.
-- Run available lint, typecheck, and tests before claiming work is complete.
+- Run focused tests during each TDD cycle. Run the full lint, typecheck, test, OpenSpec validation, and build gates at the completion checkpoint defined below, not after every small task.
 - Separate maker and checker passes:
   - Maker creates or modifies specs/code.
   - Checker reviews against PRD, requirements, OpenSpec, and this file.
-- Use `$update-current-state` when an active change, meaningful task progress, validation result, blocker, archive status, or exact next task changes, and before handing work to another agent window.
+- Use `$update-current-state` at a checkpoint: before pausing or handing work to another agent window, when the exact next task or active change changes, when a blocker changes execution, after a full-validation result, or when archive status changes. Batch consecutive completed subtasks into one refresh when work continues in the same window.
 - Keep `docs/current-state.md` concise and replace stale status instead of appending a session diary. Never copy detailed requirements into it.
+
+## Efficient Execution
+
+- Continue an approved active change autonomously in task order until a checkpoint, blocker, scope decision, or user-requested pause.
+- Use the smallest set of project skills required for the current action; do not repeat overlapping review or handoff workflows unless their distinct gate is due.
+- Read only the OpenSpec artifacts, canonical requirements, ADR sections, and source files needed for the current task. Do not repeatedly reload unchanged background documents in the same window.
+- Treat a task-level TDD cycle as: one focused failing behavior test, minimal implementation, focused passing test, then refactor if needed. Prefer concise test reporters or targeted test files so failures do not emit large DOM dumps unless the dump is needed for diagnosis.
+- Use validation tiers:
+  - **Per behavior:** run the focused test that proves the behavior.
+  - **Per related task group (normally two to three tasks):** run affected tests plus lint or typecheck when the edits can affect them.
+  - **Completion checkpoint:** run the full test suite, lint, typecheck, strict OpenSpec validation, and production build before claiming the change implementation complete.
+- Consolidate visual QA after all related UI states for the active change exist. Run an earlier visual check only when layout evidence is needed to guide implementation or a task explicitly requires it.
+- Do not rerun a passing full validation command when neither its inputs nor relevant configuration changed; record the most recent applicable evidence in `docs/current-state.md`.
+- Keep progress updates concise: report completed behavior, validation evidence, and the next task. Avoid repeating unchanged project context.
 
 ## UI Design Source
 
@@ -88,4 +102,4 @@ Before marking a task complete:
 - Confirm no out-of-scope features were added.
 - Add or update tests for changed behavior.
 - Document intentionally deferred behavior.
-- Refresh `docs/current-state.md` when completion changes the verified progress or next task.
+- Refresh `docs/current-state.md` at the next checkpoint when completion changes verified progress; refresh immediately when it changes the exact next task before a pause or handoff.

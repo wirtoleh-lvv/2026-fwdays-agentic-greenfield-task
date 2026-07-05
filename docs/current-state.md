@@ -6,36 +6,28 @@
 
 ## Last Updated
 
-- **Date and time:** 2026-07-05 09:12:22 EEST (+03:00)
+- **Date and time:** 2026-07-05 12:27:30 EEST (+03:00)
 - **Current phase:** Phase 9 — local-save implementation
 - **Active change:** `save-confirmed-books-locally`
-- **Progress:** Tasks 1.1, 1.2, and 2.1 are complete (3 of 15). The app now validates and loads versioned browser storage, reports invalid reads as retryable without overwriting data, renders empty/populated Home Library states, and opens the existing photo flow through Add books without a write.
-- **Next task:** Complete task 2.2 by capturing and comparing empty/populated Home Library states at matched desktop and mobile viewports; the in-app browser was unavailable, so standalone Playwright requires explicit user approval or equivalent user-provided rendered evidence.
+- **Progress:** 9 of 15 tasks are complete. Versioned loading, safe read failures, Home Library entry states, explicit Save eligibility, deterministic duplicate classification, all-conflict review/resolution, and conflict-free atomic saving are implemented.
+- **Next task:** Apply task 5.2 with `$openspec-tdd`: save a resolved conflict batch atomically and prove it reloads in a later browser session without a backend request.
 
 ## Canonical Context
 
-This handoff is non-canonical. Resolve conflicts in favor of:
-
-1. `AGENTS.md` — project workflow, design-source rules, and guardrails.
-2. `openspec/changes/save-confirmed-books-locally/` — active proposal, design, delta spec, and tasks.
-3. `docs/requirements/local-library-management.md`, `duplicate-detection.md`, `failure-handling.md`, `privacy-and-data-retention.md`, and `non-functional-requirements.md` — canonical behavior.
-4. `openspec/specs/candidate-decision/spec.md` and `openspec/specs/photo-book-extraction/spec.md` — accepted upstream behavior.
-5. `docs/PRD.md`, `docs/Vocabulary.md`, and `docs/adr/ADR-001-local-first-browser-persistence.md` — product context, terms, and browser-only persistence decision.
+This handoff is non-canonical. Resolve conflicts in favor of `AGENTS.md`, the artifacts under `openspec/changes/save-confirmed-books-locally/`, the owning files under `docs/requirements/`, `docs/PRD.md`, `docs/Vocabulary.md`, and `docs/adr/ADR-001-local-first-browser-persistence.md`.
 
 ## OpenSpec Status
 
-- Active change: `save-confirmed-books-locally`, with 3 of 15 tasks complete and all four planning artifacts complete.
+- Active change: `save-confirmed-books-locally`, 9 of 15 tasks complete; all planning artifacts complete.
 - Archived changes: `2026-07-04-decide-extracted-candidates` and `2026-07-04-add-books-from-photo`, both complete.
-- `npx openspec validate --all --strict`: observed passing on 2026-07-05; 3 items passed and 0 failed.
+- `npx openspec validate --all --strict`: observed passing on 2026-07-05; 3 passed, 0 failed.
 
 ## Change Progress
 
-### `save-confirmed-books-locally`
-
-- **Completed:** versioned browser-storage reads, retryable non-destructive load failures, Home Library startup from empty/populated storage, and no-write Add books navigation.
-- **Evidence:** storage and app UI tests trace `FR-LIB-002`, `FR-LIB-003`, `FR-FAIL-004`, `NFR-PRIV-001`, `NFR-A11Y-003`, `TC-STORAGE-001`, and `TC-STORAGE-002`.
-- **Implemented but not accepted:** responsive empty/populated styling and deferred-control exclusions are covered by tests, but task 2.2 remains unchecked because rendered desktop/mobile comparison is blocked. `design-qa.md` records `final result: blocked`.
-- **Remaining after task 2.2:** explicit Save eligibility, duplicate classification/review, atomic writes/retry, accessibility, save-success design verification, and checker passes. Edit, remove, search, Manual Add, metadata, covers, fuzzy matching, accounts, backend persistence, and cloud sync remain deferred.
+- **Completed:** browser-local reads; non-destructive retryable read errors; empty/populated Home Library; transient Confirm plus explicit Save; normalized duplicate classification; all-conflict Duplicate Review; preserved choices across Back; explicit Save anyway/Exclude; one-write conflict-free saving with new local IDs, saved-count status, and Home Library focus.
+- **Evidence:** 17 test files / 41 tests pass with requirement IDs covering the completed tasks. The user manually accepted empty/populated desktop/mobile layouts, visible focus, Add books navigation, and scope exclusions for task 2.2.
+- **Remaining:** resolved-conflict reload, write-failure Retry, keyboard/focus completion, Duplicate Review/save-success visual acceptance, full validation/build, and separate checker passes.
+- **Deferred:** edit, remove, search, Manual Add, metadata, covers, fuzzy matching, accounts, backend persistence, and cloud sync.
 
 ## Validation
 
@@ -44,21 +36,21 @@ Observed in this update:
 ```bash
 npm run lint       # passed
 npm run typecheck  # passed
-npm test           # passed: 15 files / 36 tests
+npm test           # passed: 17 files / 41 tests
 npx openspec validate --all --strict  # passed: 3 / 3 items
 ```
 
-`npm run build` was not run; the active change's completion task still requires it. Rendered UI QA is blocked because the configured in-app browser was unavailable.
+`npm run build` was not run; task 7.1 still requires it.
 
 ## Environment and Privacy
 
-- Runtime stack remains Next.js 16.2.10, React 19.2.7, TypeScript 5.9.3, OpenAI SDK 6.45.0, and Sharp 0.35.3.
-- Home Library records remain browser-only; no Library Book, candidate, or duplicate decision crosses a server boundary.
-- Planning and implementation changes are uncommitted. `.env.local` may contain a real provider key and must never be printed or committed.
+- Home Library records remain browser-only; saving serializes one complete versioned collection with one `setItem` call.
+- Candidate IDs are not persisted as Library Book IDs; local ID generation is injectable for tests.
+- Planning and implementation changes are uncommitted. Never print or commit `.env.local`.
 
 ## Agent Rules and Gotchas
 
-- Do not mark task 2.2 complete without matched desktop/mobile rendered evidence; the current `design-qa.md` is explicitly blocked.
-- The in-app browser reported unavailable on 2026-07-05. Browser workflow rules require user approval before using standalone Playwright.
-- Missing storage is empty; malformed, unsupported, or unavailable storage must remain untouched and retryable.
-- Use screenshots `01`, `12`, `14`, and `15` as visual references while omitting out-of-scope search/edit/remove/Manual Add and cover-persistence UI.
+- `PhotoExtractionForm` owns transient candidate and duplicate-plan state; `LibrarianApp` owns the loaded Home Library and successful navigation.
+- Duplicate resolutions are keyed by candidate/library IDs and survive Back; non-conflicting confirmed candidates remain queued automatically.
+- `design-qa.md` remains blocked for combined screenshot comparison because automated capture was declined, although user-provided manual evidence satisfies task 2.2.
+- Task 5.3 must catch write failures without unmounting the save workflow or losing candidate/conflict state.
