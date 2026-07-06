@@ -1,6 +1,14 @@
 "use client";
 
-import { BookOpen, HardDrive, Pencil, Plus, Trash2, X } from "lucide-react";
+import {
+  BookOpen,
+  HardDrive,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+  X,
+} from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import {
@@ -39,6 +47,7 @@ export function LibrarianApp({
   createLibraryBookId?: () => string;
 }) {
   const [state, setState] = useState<AppState>({ kind: "loading" });
+  const [searchQuery, setSearchQuery] = useState("");
 
   const loadLibrary = useCallback(() => {
     try {
@@ -113,7 +122,9 @@ export function LibrarianApp({
     <HomeLibrary
       books={state.books}
       savedCount={state.savedCount}
+      searchQuery={searchQuery}
       restoreAddBooksFocus={state.restoreAddBooksFocus}
+      onSearchQueryChange={setSearchQuery}
       onEditBook={(targetId, updates) => {
         const result = updateHomeLibraryBook(
           storage ?? window.localStorage,
@@ -141,15 +152,19 @@ export function LibrarianApp({
 function HomeLibrary({
   books,
   savedCount,
+  searchQuery,
   restoreAddBooksFocus = false,
   onAddBooks,
+  onSearchQueryChange,
   onEditBook,
   onRemoveBook,
 }: {
   books: LibraryBook[];
   savedCount?: number;
+  searchQuery: string;
   restoreAddBooksFocus?: boolean;
   onAddBooks: () => void;
+  onSearchQueryChange: (nextQuery: string) => void;
   onEditBook: (
     targetId: string,
     updates: LibraryBookInput,
@@ -158,6 +173,7 @@ function HomeLibrary({
 }) {
   const addBooksButtonRef = useRef<HTMLButtonElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const editDialogRef = useRef<HTMLElement>(null);
   const editPrimaryActionRef = useRef<HTMLButtonElement>(null);
   const editTitleRef = useRef<HTMLInputElement>(null);
@@ -177,6 +193,21 @@ function HomeLibrary({
   const [removalTarget, setRemovalTarget] = useState<LibraryBook | null>(null);
   const [removalStatus, setRemovalStatus] = useState<string | null>(null);
   const [removalFailed, setRemovalFailed] = useState(false);
+  const normalizedSearchQuery = searchQuery.trim().toLocaleLowerCase();
+  const hasActiveSearch = normalizedSearchQuery !== "";
+  const visibleBooks =
+    !hasActiveSearch
+      ? books
+      : books.filter((book) => {
+          const authorText = book.authorUnknown
+            ? "Author unknown"
+            : book.authors.join(", ");
+
+          return (
+            book.title.toLocaleLowerCase().includes(normalizedSearchQuery) ||
+            authorText.toLocaleLowerCase().includes(normalizedSearchQuery)
+          );
+        });
   const editDuplicateCategory =
     editTarget === null || editDraft === null
       ? null
@@ -276,6 +307,11 @@ function HomeLibrary({
     setEditFailed(false);
     setEditDraft(null);
     setEditTarget(null);
+  }
+
+  function clearSearch() {
+    onSearchQueryChange("");
+    searchInputRef.current?.focus();
   }
 
   function requestCloseEditDialog() {
@@ -472,21 +508,50 @@ function HomeLibrary({
       <SiteHeader />
       <main className="home-library-shell">
         <div className="home-library-heading">
-          <div>
+          <div className="home-library-heading-copy">
             <h1 ref={headingRef} tabIndex={-1}>Home Library</h1>
             <p>
               {books.length} {books.length === 1 ? "book" : "books"}
             </p>
           </div>
-          <button
-            ref={addBooksButtonRef}
-            className="primary-button"
-            type="button"
-            onClick={onAddBooks}
-          >
-            <Plus aria-hidden="true" />
-            Add books
-          </button>
+          <div className="home-library-header-actions">
+            <div className="home-library-search">
+              <label className="sr-only" htmlFor="search-saved-books">
+                Search saved books
+              </label>
+              <div className="home-library-search-field">
+                <Search aria-hidden="true" />
+                <input
+                  ref={searchInputRef}
+                  id="search-saved-books"
+                  type="search"
+                  name="search-saved-books"
+                  placeholder="Search by title or author..."
+                  value={searchQuery}
+                  onChange={(event) => onSearchQueryChange(event.target.value)}
+                />
+                {hasActiveSearch ? (
+                  <button
+                    className="home-library-search-clear"
+                    type="button"
+                    aria-label="Clear search query"
+                    onClick={clearSearch}
+                  >
+                    <X aria-hidden="true" />
+                  </button>
+                ) : null}
+              </div>
+            </div>
+            <button
+              ref={addBooksButtonRef}
+              className="primary-button"
+              type="button"
+              onClick={onAddBooks}
+            >
+              <Plus aria-hidden="true" />
+              Add books
+            </button>
+          </div>
         </div>
         {removalStatus !== null ? (
           <p className="message message-neutral" role="status">
@@ -497,60 +562,75 @@ function HomeLibrary({
             {savedCount} {savedCount === 1 ? "book" : "books"} saved.
           </p>
         )}
-        <ul className="home-library-list" aria-label="Saved books">
-          {books.map((book, index) => (
-            <li key={book.id}>
-              <div
-                aria-hidden="true"
-                className={`home-library-book-cover home-library-book-cover-${index % 4}`}
-              />
-              <div className="home-library-book-copy">
-                <strong className="home-library-book-title">{book.title}</strong>
-                <span className="home-library-book-author">
-                  {book.authorUnknown
-                    ? "Author unknown"
-                    : book.authors.join(", ")}
-                </span>
-              </div>
-              <div className="home-library-book-actions">
-                <button
-                  className="edit-book-action"
-                  type="button"
-                  aria-label={`Edit ${book.title}`}
-                  onClick={(event) => {
-                    editTriggerRef.current = event.currentTarget;
-                    setEditTarget(book);
-                    setEditDraft({
-                      title: book.title,
-                      authors: [...book.authors],
-                      authorUnknown: book.authorUnknown,
-                    });
-                    setEditAuthorInput("");
-                    setEditFailed(false);
-                  }}
-                >
-                  <Pencil aria-hidden="true" />
-                  Edit
-                </button>
-                <button
-                  id={`remove-book-${book.id}`}
-                  className="remove-book-action"
-                  type="button"
-                  aria-label={`Remove ${book.title}`}
-                  onClick={(event) => {
-                    removalTriggerRef.current = event.currentTarget;
-                    setRemovalFailed(false);
-                    setRemovalStatus(null);
-                    setRemovalTarget(book);
-                  }}
-                >
-                  <Trash2 aria-hidden="true" />
-                  Remove
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
+        {visibleBooks.length === 0 ? (
+          <section className="home-library-no-results" aria-live="polite">
+            <Search aria-hidden="true" />
+            <h2>{`No results for "${searchQuery}"`}</h2>
+            <p>Try a different title or author name.</p>
+            <button className="text-button" type="button" onClick={clearSearch}>
+              Clear search
+            </button>
+          </section>
+        ) : (
+          <ul className="home-library-list" aria-label="Saved books">
+            {visibleBooks.map((book, index) => (
+              <li key={book.id}>
+                <div
+                  aria-hidden="true"
+                  className={`home-library-book-cover home-library-book-cover-${index % 4}`}
+                  data-title={book.title}
+                  data-author={
+                    book.authorUnknown ? "Unknown author" : book.authors.join(", ")
+                  }
+                />
+                <div className="home-library-book-copy">
+                  <strong className="home-library-book-title">{book.title}</strong>
+                  <span className="home-library-book-author">
+                    {book.authorUnknown
+                      ? "Author unknown"
+                      : book.authors.join(", ")}
+                  </span>
+                </div>
+                <div className="home-library-book-actions">
+                  <button
+                    className="edit-book-action"
+                    type="button"
+                    aria-label={`Edit ${book.title}`}
+                    onClick={(event) => {
+                      editTriggerRef.current = event.currentTarget;
+                      setEditTarget(book);
+                      setEditDraft({
+                        title: book.title,
+                        authors: [...book.authors],
+                        authorUnknown: book.authorUnknown,
+                      });
+                      setEditAuthorInput("");
+                      setEditFailed(false);
+                    }}
+                  >
+                    <Pencil aria-hidden="true" />
+                    Edit
+                  </button>
+                  <button
+                    id={`remove-book-${book.id}`}
+                    className="remove-book-action"
+                    type="button"
+                    aria-label={`Remove ${book.title}`}
+                    onClick={(event) => {
+                      removalTriggerRef.current = event.currentTarget;
+                      setRemovalFailed(false);
+                      setRemovalStatus(null);
+                      setRemovalTarget(book);
+                    }}
+                  >
+                    <Trash2 aria-hidden="true" />
+                    Remove
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
         {editTarget === null || editDraft === null ? null : (
           <div className="remove-dialog-backdrop">
             <section

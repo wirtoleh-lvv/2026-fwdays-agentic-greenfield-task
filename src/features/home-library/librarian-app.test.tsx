@@ -1319,6 +1319,404 @@ describe("Home Library entry state", () => {
     expect(screen.getByRole("button", { name: "Add books" })).toHaveFocus();
   });
 
+  it("FR-LIB-006 FR-LIB-002 FR-LIB-003 renders populated-state search with session-local query state while keeping the total saved-book count", async () => {
+    const user = userEvent.setup();
+    const storage = {
+      getItem: vi.fn().mockReturnValue(
+        JSON.stringify({
+          version: 1,
+          books: [
+            {
+              id: "book-1",
+              title: "Kindred",
+              authors: ["Octavia E. Butler"],
+              authorUnknown: false,
+            },
+            {
+              id: "book-2",
+              title: "The Left Hand of Darkness",
+              authors: ["Ursula K. Le Guin"],
+              authorUnknown: false,
+            },
+          ],
+        }),
+      ),
+      setItem: vi.fn(),
+    };
+    render(<LibrarianApp storage={storage} />);
+
+    expect(
+      await screen.findByRole("heading", { name: "Home Library" }),
+    ).toBeInTheDocument();
+    const search = screen.getByRole("searchbox", {
+      name: "Search saved books",
+    });
+    expect(search).toHaveValue("");
+    expect(screen.getByText("2 books")).toBeInTheDocument();
+
+    await user.type(search, "Butler");
+
+    expect(search).toHaveValue("Butler");
+    expect(screen.getByText("2 books")).toBeInTheDocument();
+    expect(storage.setItem).not.toHaveBeenCalled();
+  });
+
+  it("FR-LIB-006 NFR-A11Y-001 NFR-A11Y-002 filters saved books live by title or author while keeping search focus", async () => {
+    const user = userEvent.setup();
+    render(
+      <LibrarianApp
+        storage={{
+          getItem: vi.fn().mockReturnValue(
+            JSON.stringify({
+              version: 1,
+              books: [
+                {
+                  id: "book-1",
+                  title: "Kindred",
+                  authors: ["Octavia E. Butler"],
+                  authorUnknown: false,
+                },
+                {
+                  id: "book-2",
+                  title: "Parable of the Sower",
+                  authors: ["Octavia E. Butler"],
+                  authorUnknown: false,
+                },
+                {
+                  id: "book-3",
+                  title: "The Left Hand of Darkness",
+                  authors: ["Ursula K. Le Guin"],
+                  authorUnknown: false,
+                },
+              ],
+            }),
+          ),
+          setItem: vi.fn(),
+        }}
+      />,
+    );
+
+    const search = await screen.findByRole("searchbox", {
+      name: "Search saved books",
+    });
+
+    await user.type(search, "but");
+
+    expect(search).toHaveFocus();
+    expect(screen.getByText("Kindred")).toBeInTheDocument();
+    expect(screen.getByText("Parable of the Sower")).toBeInTheDocument();
+    expect(
+      screen.queryByText("The Left Hand of Darkness"),
+    ).not.toBeInTheDocument();
+
+    await user.clear(search);
+    await user.type(search, "LEFT");
+
+    expect(search).toHaveFocus();
+    expect(
+      screen.getByText("The Left Hand of Darkness"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Kindred")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Parable of the Sower"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("FR-LIB-006 NFR-A11Y-001 NFR-A11Y-003 shows a no-results state with both clear affordances and no storage writes", async () => {
+    const user = userEvent.setup();
+    const storage = {
+      getItem: vi.fn().mockReturnValue(
+        JSON.stringify({
+          version: 1,
+          books: [
+            {
+              id: "book-1",
+              title: "Kindred",
+              authors: ["Octavia E. Butler"],
+              authorUnknown: false,
+            },
+            {
+              id: "book-2",
+              title: "The Left Hand of Darkness",
+              authors: ["Ursula K. Le Guin"],
+              authorUnknown: false,
+            },
+          ],
+        }),
+      ),
+      setItem: vi.fn(),
+    };
+    render(<LibrarianApp storage={storage} />);
+
+    const search = await screen.findByRole("searchbox", {
+      name: "Search saved books",
+    });
+
+    await user.type(search, "zzzz");
+
+    expect(search).toHaveFocus();
+    expect(screen.getByText('No results for "zzzz"')).toBeInTheDocument();
+    expect(
+      screen.getByText("Try a different title or author name."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Clear search query" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Clear search" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Kindred")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("The Left Hand of Darkness"),
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Clear search query" }));
+
+    expect(search).toHaveValue("");
+    expect(search).toHaveFocus();
+    expect(screen.getByText("Kindred")).toBeInTheDocument();
+    expect(
+      screen.getByText("The Left Hand of Darkness"),
+    ).toBeInTheDocument();
+
+    await user.type(search, "zzzz");
+    await user.click(screen.getByRole("button", { name: "Clear search" }));
+
+    expect(search).toHaveValue("");
+    expect(search).toHaveFocus();
+    expect(screen.getByText("Kindred")).toBeInTheDocument();
+    expect(
+      screen.getByText("The Left Hand of Darkness"),
+    ).toBeInTheDocument();
+    expect(storage.setItem).not.toHaveBeenCalled();
+  });
+
+  it("FR-LIB-006 FR-LIB-003 preserves the active query across in-app transitions and clears it on a fresh reload", async () => {
+    const user = userEvent.setup();
+    const storage = {
+      getItem: vi.fn().mockReturnValue(
+        JSON.stringify({
+          version: 1,
+          books: [
+            {
+              id: "book-1",
+              title: "Kindred",
+              authors: ["Octavia E. Butler"],
+              authorUnknown: false,
+            },
+            {
+              id: "book-2",
+              title: "The Left Hand of Darkness",
+              authors: ["Ursula K. Le Guin"],
+              authorUnknown: false,
+            },
+          ],
+        }),
+      ),
+      setItem: vi.fn(),
+    };
+    const view = render(<LibrarianApp storage={storage} />);
+
+    const search = await screen.findByRole("searchbox", {
+      name: "Search saved books",
+    });
+    await user.type(search, "but");
+    expect(search).toHaveValue("but");
+    expect(
+      screen.queryByText("The Left Hand of Darkness"),
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Add books" }));
+    expect(
+      screen.getByRole("heading", { name: "Add books from a photo" }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    const returnedSearch = await screen.findByRole("searchbox", {
+      name: "Search saved books",
+    });
+    expect(returnedSearch).toHaveValue("but");
+    expect(screen.getByText("Kindred")).toBeInTheDocument();
+    expect(
+      screen.queryByText("The Left Hand of Darkness"),
+    ).not.toBeInTheDocument();
+
+    view.unmount();
+
+    render(<LibrarianApp storage={storage} />);
+
+    const reloadedSearch = await screen.findByRole("searchbox", {
+      name: "Search saved books",
+    });
+    expect(reloadedSearch).toHaveValue("");
+    expect(screen.getByText("Kindred")).toBeInTheDocument();
+    expect(
+      screen.getByText("The Left Hand of Darkness"),
+    ).toBeInTheDocument();
+    expect(storage.setItem).not.toHaveBeenCalled();
+  });
+
+  it("FR-LIB-006 FR-LIB-001 recomputes filtered results immediately after saving while a query is active", async () => {
+    const user = userEvent.setup();
+    const storage = {
+      getItem: vi.fn().mockReturnValue(
+        JSON.stringify({
+          version: 1,
+          books: [
+            {
+              id: "book-1",
+              title: "Kindred",
+              authors: ["Octavia E. Butler"],
+              authorUnknown: false,
+            },
+          ],
+        }),
+      ),
+      setItem: vi.fn(),
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        Response.json([
+          {
+            id: "candidate-1",
+            title: "Piranesi",
+            authors: ["Susanna Clarke"],
+          },
+        ]),
+      ),
+    );
+    render(
+      <LibrarianApp
+        storage={storage}
+        createLibraryBookId={() => "local-book-1"}
+      />,
+    );
+
+    const search = await screen.findByRole("searchbox", {
+      name: "Search saved books",
+    });
+    await user.type(search, "pira");
+    expect(screen.getByText('No results for "pira"')).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Add books" }));
+    await user.upload(
+      screen.getByLabelText("Book-cover photo"),
+      new File(["photo"], "book.jpg", { type: "image/jpeg" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Find books in photo" }),
+    );
+    await screen.findByRole("heading", { name: "Review detected books" });
+    await user.click(screen.getByRole("button", { name: "Confirm" }));
+    await user.click(
+      screen.getByRole("button", { name: "Save confirmed books" }),
+    );
+
+    expect(await screen.findByRole("searchbox", { name: "Search saved books" })).toHaveValue(
+      "pira",
+    );
+    expect(screen.getByText("Piranesi")).toBeInTheDocument();
+    expect(screen.queryByText("Kindred")).not.toBeInTheDocument();
+    expect(screen.queryByText('No results for "pira"')).not.toBeInTheDocument();
+  });
+
+  it("FR-LIB-006 FR-LIB-004 recomputes filtered results immediately after editing while a query is active", async () => {
+    const user = userEvent.setup();
+    render(
+      <LibrarianApp
+        storage={{
+          getItem: vi.fn().mockReturnValue(
+            JSON.stringify({
+              version: 1,
+              books: [
+                {
+                  id: "book-1",
+                  title: "Piranesi",
+                  authors: ["Susanna Clarke"],
+                  authorUnknown: false,
+                },
+                {
+                  id: "book-2",
+                  title: "Kindred",
+                  authors: ["Octavia E. Butler"],
+                  authorUnknown: false,
+                },
+              ],
+            }),
+          ),
+          setItem: vi.fn(),
+        }}
+      />,
+    );
+
+    const search = await screen.findByRole("searchbox", {
+      name: "Search saved books",
+    });
+    await user.type(search, "pira");
+    expect(screen.getByText("Piranesi")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Edit Piranesi" }));
+    const dialog = screen.getByRole("dialog", { name: "Edit book" });
+    const title = within(dialog).getByRole("textbox", { name: "Title" });
+    await user.clear(title);
+    await user.type(title, "Invisible Cities");
+    await user.click(within(dialog).getByRole("button", { name: "Save changes" }));
+
+    expect(await screen.findByRole("searchbox", { name: "Search saved books" })).toHaveValue(
+      "pira",
+    );
+    expect(screen.queryByText("Piranesi")).not.toBeInTheDocument();
+    expect(screen.getByText('No results for "pira"')).toBeInTheDocument();
+  });
+
+  it("FR-LIB-006 FR-LIB-005 recomputes filtered results immediately after removal while a query is active", async () => {
+    const user = userEvent.setup();
+    render(
+      <LibrarianApp
+        storage={{
+          getItem: vi.fn().mockReturnValue(
+            JSON.stringify({
+              version: 1,
+              books: [
+                {
+                  id: "book-1",
+                  title: "Piranesi",
+                  authors: ["Susanna Clarke"],
+                  authorUnknown: false,
+                },
+                {
+                  id: "book-2",
+                  title: "Kindred",
+                  authors: ["Octavia E. Butler"],
+                  authorUnknown: false,
+                },
+              ],
+            }),
+          ),
+          setItem: vi.fn(),
+        }}
+      />,
+    );
+
+    const search = await screen.findByRole("searchbox", {
+      name: "Search saved books",
+    });
+    await user.type(search, "pira");
+    expect(screen.getByText("Piranesi")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Remove Piranesi" }));
+    const dialog = screen.getByRole("dialog", { name: "Remove book" });
+    await user.click(within(dialog).getByRole("button", { name: "Remove" }));
+
+    expect(await screen.findByRole("searchbox", { name: "Search saved books" })).toHaveValue(
+      "pira",
+    );
+    expect(screen.queryByText("Piranesi")).not.toBeInTheDocument();
+    expect(screen.getByText('No results for "pira"')).toBeInTheDocument();
+  });
+
   it("FR-LIB-002 NFR-A11Y-003 presents an explicit local-only empty state without deferred controls", async () => {
     render(
       <LibrarianApp

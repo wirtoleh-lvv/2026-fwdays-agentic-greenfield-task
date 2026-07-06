@@ -324,22 +324,119 @@ button {
   gap: 32px;
 }
 
+.home-library-heading-copy {
+  flex: 0 0 auto;
+}
+
 .home-library-heading h1 {
   margin-top: 0;
+  font-size: clamp(2.8rem, 5vw, 4.125rem);
+  line-height: 0.98;
 }
 
 .home-library-heading p {
-  margin: 12px 0 0;
+  margin: 14px 0 0;
   color: var(--muted);
-  font-size: 16px;
+  font-size: 22px;
+  line-height: 1.25;
+}
+
+.home-library-header-actions {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 18px;
+  min-width: 0;
+}
+
+.home-library-search {
+  width: min(100%, 420px);
+}
+
+.home-library-search-field {
+  min-height: 76px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 20px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+
+.home-library-search-field:focus-within {
+  border-color: var(--green);
+  box-shadow:
+    inset 0 0 0 2px rgba(95, 128, 95, 0.18),
+    0 0 0 1px var(--green);
+}
+
+.home-library-search-field > svg {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  color: #8d8579;
+  stroke-width: 1.75;
+}
+
+.home-library-search-field input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 21px;
+  color: var(--ink);
+}
+
+.home-library-search-field input::placeholder {
+  color: #9b9388;
+}
+
+.home-library-search-field input:focus {
+  outline: 0;
+}
+
+.home-library-search-field input::-webkit-search-decoration,
+.home-library-search-field input::-webkit-search-cancel-button,
+.home-library-search-field input::-webkit-search-results-button,
+.home-library-search-field input::-webkit-search-results-decoration {
+  appearance: none;
+  display: none;
+}
+
+.home-library-search-clear {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  background: transparent;
+  color: #7c8fb4;
+  cursor: pointer;
+}
+
+.home-library-search-clear:hover {
+  background: rgba(95, 128, 95, 0.08);
+}
+
+.home-library-search-clear svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2.5;
 }
 
 .home-library-list {
   margin: 48px 0 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 36px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 40px 28px;
   list-style: none;
 }
 
@@ -357,8 +454,9 @@ button {
 }
 
 .home-library-book-cover {
-  width: 176px;
-  height: 252px;
+  width: 154px;
+  height: 230px;
+  padding: 16px 14px 14px;
   border-radius: 4px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.12)),
@@ -366,6 +464,11 @@ button {
   box-shadow:
     0 10px 24px rgba(38, 35, 30, 0.22),
     inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
 }
 
 .home-library-book-cover-1 {
@@ -388,29 +491,58 @@ button {
 
 .home-library-book-copy {
   display: grid;
-  gap: 8px;
+  gap: 4px;
+  max-width: 220px;
 }
 
 .home-library-book-title,
 .home-library-list strong {
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(2rem, 2vw, 2.25rem);
-  font-weight: 500;
-  line-height: 1.18;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.32;
   letter-spacing: -0.02em;
 }
 
 .home-library-book-author,
 .home-library-list span {
   color: var(--muted);
-  font-size: 18px;
+  font-size: 17px;
   line-height: 1.4;
+}
+
+.home-library-book-cover::before,
+.home-library-book-cover::after {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  display: block;
+  white-space: pre-wrap;
+  pointer-events: none;
+}
+
+.home-library-book-cover::before {
+  content: attr(data-title);
+  top: 14px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.22;
+  color: rgba(255, 253, 248, 0.96);
+}
+
+.home-library-book-cover::after {
+  content: attr(data-author);
+  bottom: 14px;
+  font-size: 12px;
+  line-height: 1.25;
+  color: rgba(255, 255, 255, 0.68);
 }
 
 .home-library-book-actions {
   display: flex;
   align-items: center;
   gap: 18px;
+  flex-wrap: wrap;
 }
 
 .edit-book-action,
@@ -443,11 +575,63 @@ button {
   color: var(--error);
 }
 
+.remove-book-action:hover {
+  color: #ad3f1f;
+}
+
 .edit-book-action svg,
 .remove-book-action svg,
 .destructive-button svg {
   width: 20px;
   height: 20px;
+}
+
+.home-library-no-results {
+  margin: 112px auto 0;
+  max-width: 420px;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  text-align: center;
+}
+
+.home-library-no-results > svg {
+  width: 64px;
+  height: 64px;
+  color: #867d70;
+  stroke-width: 1.65;
+}
+
+.home-library-no-results h2 {
+  margin: 28px 0 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2rem, 3vw, 2.5rem);
+  font-weight: 500;
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+}
+
+.home-library-no-results p {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1.45;
+}
+
+.home-library-no-results .text-button {
+  width: auto;
+  min-height: 0;
+  margin-top: 28px;
+  padding: 0;
+  color: var(--green);
+  font-size: 18px;
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.home-library-no-results .text-button:hover {
+  color: var(--green-hover);
 }
 
 .remove-dialog-backdrop {
@@ -1296,26 +1480,69 @@ button {
     gap: 22px;
   }
 
+  .home-library-heading p {
+    font-size: 18px;
+  }
+
+  .home-library-header-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .home-library-search {
+    width: 100%;
+  }
+
+  .home-library-search-field {
+    min-height: 64px;
+    padding: 0 16px;
+    gap: 12px;
+  }
+
+  .home-library-search-field input {
+    font-size: 18px;
+  }
+
   .home-library-heading .primary-button {
     width: 100%;
   }
 
   .home-library-list {
     margin-top: 26px;
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 28px;
   }
 
   .home-library-book-cover {
-    width: min(100%, 176px);
+    width: min(100%, 154px);
     height: 232px;
   }
 
   .home-library-book-title {
-    font-size: 2rem;
+    font-size: 18px;
   }
 
   .home-library-book-author {
+    font-size: 16px;
+  }
+
+  .home-library-no-results {
+    margin-top: 64px;
+    max-width: 320px;
+  }
+
+  .home-library-no-results > svg {
+    width: 54px;
+    height: 54px;
+  }
+
+  .home-library-no-results h2 {
+    margin-top: 22px;
+    font-size: 1.95rem;
+  }
+
+  .home-library-no-results p,
+  .home-library-no-results .text-button {
     font-size: 16px;
   }
 
