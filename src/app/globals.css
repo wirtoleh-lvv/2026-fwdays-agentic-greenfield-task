@@ -314,12 +314,12 @@ button {
 .home-library-shell {
   width: min(100% - 48px, 1088px);
   margin: 0 auto;
-  padding: 42px 0 96px;
+  padding: 54px 0 104px;
 }
 
 .home-library-heading {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 32px;
 }
@@ -329,70 +329,125 @@ button {
 }
 
 .home-library-heading p {
-  margin: 7px 0 0;
+  margin: 12px 0 0;
   color: var(--muted);
-  font-size: 14px;
+  font-size: 16px;
 }
 
 .home-library-list {
-  margin: 34px 0 0;
+  margin: 48px 0 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 36px;
   list-style: none;
 }
 
 .home-library-list li {
-  min-height: 128px;
-  padding: 22px;
-  border: 1px solid var(--border);
-  border-radius: 7px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
   display: flex;
-  justify-content: flex-end;
   flex-direction: column;
-  gap: 6px;
-  background: var(--surface);
-  box-shadow: 0 2px 8px rgba(38, 35, 30, 0.05);
+  align-items: flex-start;
+  gap: 20px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.home-library-book-cover {
+  width: 176px;
+  height: 252px;
+  border-radius: 4px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.12)),
+    linear-gradient(135deg, #5b7858, #49654a);
+  box-shadow:
+    0 10px 24px rgba(38, 35, 30, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+.home-library-book-cover-1 {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.12)),
+    linear-gradient(135deg, #705b4d, #5e4c41);
+}
+
+.home-library-book-cover-2 {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.12)),
+    linear-gradient(135deg, #4f7b68, #406454);
+}
+
+.home-library-book-cover-3 {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.12)),
+    linear-gradient(135deg, #8a5a4b, #714638);
 }
 
 .home-library-book-copy {
   display: grid;
-  gap: 6px;
+  gap: 8px;
 }
 
+.home-library-book-title,
 .home-library-list strong {
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 18px;
+  font-size: clamp(2rem, 2vw, 2.25rem);
   font-weight: 500;
-  line-height: 1.25;
+  line-height: 1.18;
+  letter-spacing: -0.02em;
 }
 
+.home-library-book-author,
 .home-library-list span {
   color: var(--muted);
-  font-size: 13px;
+  font-size: 18px;
   line-height: 1.4;
 }
 
+.home-library-book-actions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.edit-book-action,
 .remove-book-action {
   width: fit-content;
-  margin-top: 12px;
-  padding: 4px 0;
-  border: 0;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 10px;
+  min-height: 56px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 10px;
   background: transparent;
-  color: var(--error);
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 650;
   cursor: pointer;
 }
 
+.edit-book-action {
+  background: var(--green-soft);
+  color: var(--ink);
+}
+
+.edit-book-action:hover {
+  background: #e4eee0;
+}
+
+.remove-book-action {
+  padding: 0;
+  color: var(--error);
+}
+
+.edit-book-action svg,
 .remove-book-action svg,
 .destructive-button svg {
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
 }
 
 .remove-dialog-backdrop {
@@ -407,17 +462,17 @@ button {
 }
 
 .remove-dialog {
-  width: min(100%, 384px);
+  width: min(100%, 752px);
   overflow: hidden;
   border: 1px solid var(--border);
-  border-radius: 7px;
+  border-radius: 12px;
   background: var(--surface);
-  box-shadow: 0 18px 50px rgba(38, 35, 30, 0.22);
+  box-shadow: 0 24px 60px rgba(38, 35, 30, 0.2);
 }
 
 .remove-dialog > header {
-  min-height: 60px;
-  padding: 0 22px;
+  min-height: 108px;
+  padding: 0 40px;
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
@@ -428,14 +483,15 @@ button {
 .remove-dialog h2 {
   margin: 0;
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 20px;
+  font-size: 34px;
   font-weight: 500;
+  letter-spacing: -0.02em;
 }
 
 .remove-dialog > header button {
   width: 38px;
   height: 38px;
-  margin-right: -10px;
+  margin-right: -12px;
   padding: 0;
   border: 0;
   display: grid;
@@ -446,12 +502,12 @@ button {
 }
 
 .remove-dialog > header svg {
-  width: 18px;
-  height: 18px;
+  width: 30px;
+  height: 30px;
 }
 
 .remove-dialog-body {
-  padding: 22px;
+  padding: 36px 40px 40px;
 }
 
 .remove-dialog-body p {
@@ -474,6 +530,122 @@ button {
   display: flex;
   align-items: center;
   gap: 20px;
+}
+
+.edit-dialog-body {
+  display: grid;
+  gap: 26px;
+}
+
+.edit-dialog-field {
+  display: grid;
+  gap: 12px;
+}
+
+.edit-dialog-field > label {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.edit-dialog-field > label span {
+  color: var(--error);
+}
+
+.edit-dialog-input {
+  width: 100%;
+  min-height: 72px;
+  padding: 0 18px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fffefa;
+  font-size: 18px;
+  color: var(--ink);
+}
+
+.edit-dialog-input::placeholder {
+  color: #8b8378;
+}
+
+.edit-dialog-input:hover {
+  border-color: #c7bfaf;
+}
+
+.edit-dialog-input:focus {
+  border-color: var(--green);
+}
+
+.edit-dialog-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.edit-dialog-chip {
+  min-height: 56px;
+  padding: 0 18px;
+  border: 1px solid #d7e3d4;
+  border-radius: 999px;
+  background: var(--green-soft);
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 17px;
+}
+
+.edit-dialog-chip-remove {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  color: #8b8378;
+  cursor: pointer;
+}
+
+.edit-dialog-chip-remove svg {
+  width: 16px;
+  height: 16px;
+}
+
+.edit-dialog-author-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 120px;
+  gap: 12px;
+}
+
+.edit-dialog-add-author {
+  min-height: 72px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fffefa;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.edit-dialog-add-author:disabled {
+  color: #9f978c;
+  cursor: not-allowed;
+}
+
+.edit-dialog-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.edit-dialog-checkbox input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--green);
+}
+
+.edit-dialog-actions {
+  margin-top: 4px;
 }
 
 .destructive-button {
@@ -772,6 +944,7 @@ button {
   padding: 0 4px;
   border: 0;
   background: transparent;
+  font-size: 15px;
 }
 
 .text-button:hover {
@@ -1130,6 +1303,61 @@ button {
   .home-library-list {
     margin-top: 26px;
     grid-template-columns: 1fr;
+    gap: 28px;
+  }
+
+  .home-library-book-cover {
+    width: min(100%, 176px);
+    height: 232px;
+  }
+
+  .home-library-book-title {
+    font-size: 2rem;
+  }
+
+  .home-library-book-author {
+    font-size: 16px;
+  }
+
+  .home-library-book-actions {
+    width: 100%;
+    gap: 14px;
+  }
+
+  .edit-book-action {
+    min-height: 52px;
+    padding: 0 18px;
+  }
+
+  .remove-dialog {
+    width: min(100%, 100%);
+  }
+
+  .remove-dialog > header {
+    min-height: 88px;
+    padding: 0 24px;
+  }
+
+  .remove-dialog h2 {
+    font-size: 28px;
+  }
+
+  .remove-dialog-body {
+    padding: 28px 24px 32px;
+  }
+
+  .edit-dialog-input,
+  .edit-dialog-add-author {
+    min-height: 60px;
+  }
+
+  .edit-dialog-author-row {
+    grid-template-columns: 1fr;
+  }
+
+  .edit-dialog-chip {
+    min-height: 48px;
+    font-size: 16px;
   }
 
   .page-introduction {

@@ -1,19 +1,23 @@
 "use client";
 
-import { BookOpen, HardDrive, Plus, Trash2, X } from "lucide-react";
+import { BookOpen, HardDrive, Pencil, Plus, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import {
   PhotoExtractionForm,
   SiteHeader,
 } from "../photo-extraction/photo-extraction-form";
+import { classifyDuplicate } from "../../lib/home-library/duplicate-classifier";
 import {
   loadHomeLibrary,
   removeHomeLibraryBook,
   saveHomeLibrary,
+  updateHomeLibraryBook,
   type HomeLibraryStorage,
+  type LibraryBookInput,
   type LibraryBook,
   type RemoveHomeLibraryBookResult,
+  type UpdateHomeLibraryBookResult,
 } from "../../lib/home-library/storage";
 
 type AppState =
@@ -110,6 +114,15 @@ export function LibrarianApp({
       books={state.books}
       savedCount={state.savedCount}
       restoreAddBooksFocus={state.restoreAddBooksFocus}
+      onEditBook={(targetId, updates) => {
+        const result = updateHomeLibraryBook(
+          storage ?? window.localStorage,
+          targetId,
+          updates,
+        );
+        setState({ kind: "home", books: result.books });
+        return result;
+      }}
       onRemoveBook={(targetId) => {
         const result = removeHomeLibraryBook(
           storage ?? window.localStorage,
@@ -130,16 +143,26 @@ function HomeLibrary({
   savedCount,
   restoreAddBooksFocus = false,
   onAddBooks,
+  onEditBook,
   onRemoveBook,
 }: {
   books: LibraryBook[];
   savedCount?: number;
   restoreAddBooksFocus?: boolean;
   onAddBooks: () => void;
+  onEditBook: (
+    targetId: string,
+    updates: LibraryBookInput,
+  ) => UpdateHomeLibraryBookResult;
   onRemoveBook: (targetId: string) => RemoveHomeLibraryBookResult;
 }) {
   const addBooksButtonRef = useRef<HTMLButtonElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const editDialogRef = useRef<HTMLElement>(null);
+  const editPrimaryActionRef = useRef<HTMLButtonElement>(null);
+  const editTitleRef = useRef<HTMLInputElement>(null);
+  const editTriggerRef = useRef<HTMLButtonElement>(null);
+  const restoreEditFocusRef = useRef(false);
   const removalDialogRef = useRef<HTMLElement>(null);
   const removalCancelRef = useRef<HTMLButtonElement>(null);
   const removalRetryRef = useRef<HTMLButtonElement>(null);
@@ -147,9 +170,38 @@ function HomeLibrary({
   const restoreRemovalFocusRef = useRef(false);
   const pendingRemovalFocusIdRef = useRef<string | null>(null);
   const pendingEmptyStateFocusRef = useRef(false);
+  const [editTarget, setEditTarget] = useState<LibraryBook | null>(null);
+  const [editDraft, setEditDraft] = useState<LibraryBookInput | null>(null);
+  const [editAuthorInput, setEditAuthorInput] = useState("");
+  const [editFailed, setEditFailed] = useState(false);
   const [removalTarget, setRemovalTarget] = useState<LibraryBook | null>(null);
   const [removalStatus, setRemovalStatus] = useState<string | null>(null);
   const [removalFailed, setRemovalFailed] = useState(false);
+  const editDuplicateCategory =
+    editTarget === null || editDraft === null
+      ? null
+      : books
+          .filter((book) => book.id !== editTarget.id)
+          .reduce<"duplicate" | "possible-duplicate" | null>(
+            (currentCategory, book) => {
+              if (currentCategory === "duplicate") {
+                return currentCategory;
+              }
+
+              const nextCategory = classifyDuplicate(
+                {
+                  id: editTarget.id,
+                  title: editDraft.title,
+                  authors: editDraft.authorUnknown ? [] : editDraft.authors,
+                  authorUnknown: editDraft.authorUnknown,
+                },
+                book,
+              );
+
+              return nextCategory ?? currentCategory;
+            },
+            null,
+          );
 
   useEffect(() => {
     if (savedCount !== undefined) {
@@ -162,6 +214,22 @@ function HomeLibrary({
       addBooksButtonRef.current?.focus();
     }
   }, [restoreAddBooksFocus]);
+
+  useEffect(() => {
+    if (editTarget !== null) {
+      if (editFailed) {
+        editPrimaryActionRef.current?.focus();
+      } else {
+        editTitleRef.current?.focus();
+      }
+      return;
+    }
+
+    if (restoreEditFocusRef.current) {
+      editTriggerRef.current?.focus();
+      restoreEditFocusRef.current = false;
+    }
+  }, [editFailed, editTarget]);
 
   useEffect(() => {
     if (removalTarget !== null) {
@@ -200,6 +268,81 @@ function HomeLibrary({
     restoreRemovalFocusRef.current = true;
     setRemovalFailed(false);
     setRemovalTarget(null);
+  }
+
+  function closeEditDialog(restoreFocus = true) {
+    restoreEditFocusRef.current = restoreFocus;
+    setEditAuthorInput("");
+    setEditFailed(false);
+    setEditDraft(null);
+    setEditTarget(null);
+  }
+
+  function requestCloseEditDialog() {
+    if (
+      editTarget !== null &&
+      editDraft !== null &&
+      isLibraryBookInputDirty(editTarget, editDraft) &&
+      !window.confirm("Discard unsaved changes?")
+    ) {
+      return;
+    }
+
+    closeEditDialog();
+  }
+
+  function trapEditDialogFocus(event: KeyboardEvent<HTMLElement>) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      requestCloseEditDialog();
+      return;
+    }
+
+    if (event.key === "Tab") {
+      const controls = Array.from(
+        editDialogRef.current?.querySelectorAll<
+          HTMLButtonElement | HTMLInputElement
+        >("button:not(:disabled), input:not(:disabled)") ?? [],
+      );
+      const firstControl = controls[0];
+      const lastControl = controls.at(-1);
+
+      if (event.shiftKey && document.activeElement === firstControl) {
+        event.preventDefault();
+        lastControl?.focus();
+        return;
+      }
+
+      if (!event.shiftKey && document.activeElement === lastControl) {
+        event.preventDefault();
+        firstControl?.focus();
+        return;
+      }
+    }
+
+    if (
+      event.key === "Enter" &&
+      document.activeElement instanceof HTMLInputElement &&
+      document.activeElement.id === "edit-book-author-input"
+    ) {
+      event.preventDefault();
+      addEditAuthor();
+    }
+  }
+
+  function addEditAuthor() {
+    const nextAuthor = editAuthorInput.trim();
+
+    if (editDraft === null || editDraft.authorUnknown || nextAuthor.length === 0) {
+      return;
+    }
+
+    setEditFailed(false);
+    setEditDraft({
+      ...editDraft,
+      authors: [...editDraft.authors, nextAuthor],
+    });
+    setEditAuthorInput("");
   }
 
   function trapRemovalDialogFocus(event: KeyboardEvent<HTMLElement>) {
@@ -257,6 +400,37 @@ function HomeLibrary({
         : `“${removalTarget.title}” is no longer in your library.`,
     );
     setRemovalTarget(null);
+  }
+
+  function confirmEdit() {
+    if (editTarget === null || editDraft === null) {
+      return;
+    }
+
+    let result: UpdateHomeLibraryBookResult;
+    try {
+      result = onEditBook(editTarget.id, editDraft);
+    } catch {
+      setEditFailed(true);
+      return;
+    }
+
+    if (result.outcome === "already-absent") {
+      const targetIndex = books.findIndex((book) => book.id === editTarget.id);
+      const focusIndex = Math.min(
+        Math.max(targetIndex, 0),
+        result.books.length - 1,
+      );
+      pendingRemovalFocusIdRef.current = result.books[focusIndex]?.id ?? null;
+      pendingEmptyStateFocusRef.current = result.books.length === 0;
+    }
+
+    setRemovalStatus(
+      result.outcome === "updated"
+        ? `“${editDraft.title.trim() || editTarget.title}” was updated.`
+        : `“${editTarget.title}” is no longer in your library.`,
+    );
+    closeEditDialog(result.outcome !== "already-absent");
   }
 
   if (books.length === 0) {
@@ -324,34 +498,219 @@ function HomeLibrary({
           </p>
         )}
         <ul className="home-library-list" aria-label="Saved books">
-          {books.map((book) => (
+          {books.map((book, index) => (
             <li key={book.id}>
+              <div
+                aria-hidden="true"
+                className={`home-library-book-cover home-library-book-cover-${index % 4}`}
+              />
               <div className="home-library-book-copy">
-                <strong>{book.title}</strong>
-                <span>
+                <strong className="home-library-book-title">{book.title}</strong>
+                <span className="home-library-book-author">
                   {book.authorUnknown
                     ? "Author unknown"
                     : book.authors.join(", ")}
                 </span>
               </div>
-              <button
-                id={`remove-book-${book.id}`}
-                className="remove-book-action"
-                type="button"
-                aria-label={`Remove ${book.title}`}
-                onClick={(event) => {
-                  removalTriggerRef.current = event.currentTarget;
-                  setRemovalFailed(false);
-                  setRemovalStatus(null);
-                  setRemovalTarget(book);
-                }}
-              >
-                <Trash2 aria-hidden="true" />
-                Remove
-              </button>
+              <div className="home-library-book-actions">
+                <button
+                  className="edit-book-action"
+                  type="button"
+                  aria-label={`Edit ${book.title}`}
+                  onClick={(event) => {
+                    editTriggerRef.current = event.currentTarget;
+                    setEditTarget(book);
+                    setEditDraft({
+                      title: book.title,
+                      authors: [...book.authors],
+                      authorUnknown: book.authorUnknown,
+                    });
+                    setEditAuthorInput("");
+                    setEditFailed(false);
+                  }}
+                >
+                  <Pencil aria-hidden="true" />
+                  Edit
+                </button>
+                <button
+                  id={`remove-book-${book.id}`}
+                  className="remove-book-action"
+                  type="button"
+                  aria-label={`Remove ${book.title}`}
+                  onClick={(event) => {
+                    removalTriggerRef.current = event.currentTarget;
+                    setRemovalFailed(false);
+                    setRemovalStatus(null);
+                    setRemovalTarget(book);
+                  }}
+                >
+                  <Trash2 aria-hidden="true" />
+                  Remove
+                </button>
+              </div>
             </li>
           ))}
         </ul>
+        {editTarget === null || editDraft === null ? null : (
+          <div className="remove-dialog-backdrop">
+            <section
+              ref={editDialogRef}
+              className="remove-dialog edit-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="edit-dialog-title"
+              onKeyDown={trapEditDialogFocus}
+            >
+              <header>
+                <h2 id="edit-dialog-title">Edit book</h2>
+                <button
+                  type="button"
+                  aria-label="Close edit dialog"
+                  onClick={requestCloseEditDialog}
+                >
+                  <X aria-hidden="true" />
+                </button>
+              </header>
+              <div className="remove-dialog-body edit-dialog-body">
+                <div className="edit-dialog-field">
+                  <label htmlFor="edit-book-title">
+                    Title <span aria-hidden="true">*</span>
+                  </label>
+                <input
+                  ref={editTitleRef}
+                  id="edit-book-title"
+                  className="edit-dialog-input"
+                  value={editDraft.title}
+                  onChange={(event) => {
+                    setEditFailed(false);
+                    setEditDraft((current) =>
+                      current === null
+                        ? current
+                        : { ...current, title: event.target.value },
+                    );
+                  }}
+                />
+                </div>
+                <div className="edit-dialog-field">
+                  <label htmlFor="edit-book-author-input">Author(s)</label>
+                  {editDraft.authors.length === 0 ? null : (
+                    <div className="edit-dialog-chip-list">
+                      {editDraft.authors.map((author, index) => (
+                        <span className="edit-dialog-chip" key={`${author}-${index}`}>
+                          {author}
+                          <button
+                            type="button"
+                            className="edit-dialog-chip-remove"
+                            aria-label={`Remove author ${author}`}
+                            disabled={editDraft.authorUnknown}
+                            onClick={() => {
+                              setEditFailed(false);
+                              setEditDraft((current) =>
+                                current === null
+                                  ? current
+                                  : {
+                                      ...current,
+                                      authors: current.authors.filter(
+                                        (_currentAuthor, authorIndex) =>
+                                          authorIndex !== index,
+                                      ),
+                                    },
+                              );
+                            }}
+                          >
+                            <X aria-hidden="true" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <div className="edit-dialog-author-row">
+                    <input
+                      id="edit-book-author-input"
+                      aria-label="Author name"
+                      className="edit-dialog-input"
+                      placeholder="Type a name and press Enter…"
+                      value={editAuthorInput}
+                      disabled={editDraft.authorUnknown}
+                      onChange={(event) => {
+                        setEditFailed(false);
+                        setEditAuthorInput(event.target.value);
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="edit-dialog-add-author"
+                      aria-label="Add author"
+                      disabled={
+                        editDraft.authorUnknown ||
+                        editAuthorInput.trim().length === 0
+                      }
+                      onClick={addEditAuthor}
+                    >
+                      Add
+                    </button>
+                  </div>
+                </div>
+                <label className="edit-dialog-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={editDraft.authorUnknown}
+                    onChange={(event) => {
+                      setEditFailed(false);
+                      setEditDraft((current) =>
+                        current === null
+                          ? current
+                          : {
+                              ...current,
+                              authorUnknown: event.target.checked,
+                            },
+                      );
+                    }}
+                  />
+                  Author unknown
+                </label>
+                {editFailed ? (
+                  <p className="message message-error" role="alert">
+                    “{editTarget.title}” was not updated.
+                  </p>
+                ) : null}
+                {editDuplicateCategory === "duplicate" ? (
+                  <p className="message message-error" role="alert">
+                    Duplicate: another saved book already matches this title and
+                    author.
+                  </p>
+                ) : editDuplicateCategory === "possible-duplicate" ? (
+                  <p className="message message-neutral" role="status">
+                    Possible duplicate: another saved book already has this
+                    title.
+                  </p>
+                ) : null}
+                <div className="remove-dialog-actions edit-dialog-actions">
+                  <button
+                    ref={editPrimaryActionRef}
+                    className="primary-button"
+                    type="button"
+                    onClick={confirmEdit}
+                    disabled={
+                      editDuplicateCategory === "duplicate" ||
+                      !isLibraryBookInputDirty(editTarget, editDraft) ||
+                      !isLibraryBookInputValid(editDraft)
+                    }
+                  >
+                    {editFailed ? "Retry" : "Save changes"}
+                  </button>
+                  <button
+                    className="text-button"
+                    type="button"
+                    onClick={requestCloseEditDialog}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </section>
+          </div>
+        )}
         {removalTarget === null ? null : (
           <div className="remove-dialog-backdrop">
             <section
@@ -416,4 +775,24 @@ function displayLibraryBookAuthors(book: LibraryBook): string {
   return book.authorUnknown || book.authors.length === 0
     ? "Author unknown"
     : book.authors.join(", ");
+}
+
+function isLibraryBookInputDirty(
+  original: LibraryBook,
+  draft: LibraryBookInput,
+): boolean {
+  return (
+    original.title !== draft.title ||
+    original.authorUnknown !== draft.authorUnknown ||
+    original.authors.length !== draft.authors.length ||
+    original.authors.some((author, index) => author !== draft.authors[index])
+  );
+}
+
+function isLibraryBookInputValid(draft: LibraryBookInput): boolean {
+  return (
+    draft.title.trim().length > 0 &&
+    (draft.authorUnknown ||
+      draft.authors.some((author) => author.trim().length > 0))
+  );
 }

@@ -18,9 +18,9 @@
 
 ## 4. Approved Remove-Dialog Presentation
 
-- [ ] 4.1 Match repository reference `05-remove-library-book-dialog.png` at desktop and mobile widths, including the modal overlay, named irreversible warning, destructive/cancel hierarchy, failure state, visible focus, and responsive layout; record intentional deviations and omit edit, search, bulk removal, Undo, and removal history (`FR-LIB-005`, `NFR-A11Y-002`, `NFR-A11Y-003`).
+- [x] 4.1 Match repository reference `05-remove-library-book-dialog.png` at desktop and mobile widths, including the modal overlay, named irreversible warning, destructive/cancel hierarchy, failure state, visible focus, and responsive layout; record intentional deviations and omit edit, search, bulk removal, Undo, and removal history (`FR-LIB-005`, `NFR-A11Y-002`, `NFR-A11Y-003`).
 
 ## 5. Completion
 
-- [ ] 5.1 Run lint, typecheck, full tests, build, and `openspec validate --all --strict`; record requirement-ID evidence, mark verified canonical requirements `tested`, and update `docs/current-state.md` without claiming deferred edit/search/Manual Add behavior.
-- [ ] 5.2 Perform separate OpenSpec, code, privacy, and rendered-UI checker passes; resolve destructive-write, stale-read, idempotency, dialog-focus, retry, scope, or responsive-layout findings before completion.
+- [x] 5.1 Run lint, typecheck, full tests, build, and `openspec validate --all --strict`; record requirement-ID evidence, mark verified canonical requirements `tested`, and update `docs/current-state.md` without claiming deferred edit/search/Manual Add behavior.
+- [x] 5.2 Perform separate OpenSpec, code, privacy, and rendered-UI checker passes; resolve destructive-write, stale-read, idempotency, dialog-focus, retry, scope, or responsive-layout findings before completion.

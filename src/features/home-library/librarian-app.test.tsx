@@ -8,6 +8,519 @@ afterEach(() => {
 });
 
 describe("Home Library entry state", () => {
+  it("FR-LIB-004 NFR-A11Y-001 NFR-A11Y-002 opens Edit with prefilled saved values and clean close returns focus without storage access", async () => {
+    const user = userEvent.setup();
+    const books = [
+      {
+        id: "book-1",
+        title: "Kindred",
+        authors: ["Octavia E. Butler"],
+        authorUnknown: false,
+      },
+      {
+        id: "book-2",
+        title: "The Employees",
+        authors: [],
+        authorUnknown: true,
+      },
+    ];
+    const storage = {
+      getItem: vi.fn().mockReturnValue(JSON.stringify({ version: 1, books })),
+      setItem: vi.fn(),
+    };
+    render(<LibrarianApp storage={storage} />);
+
+    const edit = await screen.findByRole("button", { name: "Edit Kindred" });
+    expect(
+      screen.getByRole("button", { name: "Edit The Employees" }),
+    ).toBeInTheDocument();
+    storage.getItem.mockClear();
+
+    await user.click(edit);
+
+    const dialog = screen.getByRole("dialog", { name: "Edit book" });
+    expect(within(dialog).getByRole("textbox", { name: "Title" })).toHaveValue(
+      "Kindred",
+    );
+    expect(within(dialog).getByText("Octavia E. Butler")).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("checkbox", { name: "Author unknown" }),
+    ).not.toBeChecked();
+    expect(storage.getItem).not.toHaveBeenCalled();
+    expect(storage.setItem).not.toHaveBeenCalled();
+
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(edit).toHaveFocus();
+
+    await user.click(edit);
+    await user.click(screen.getByRole("button", { name: "Close edit dialog" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(edit).toHaveFocus();
+
+    await user.click(edit);
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(edit).toHaveFocus();
+    expect(storage.getItem).not.toHaveBeenCalled();
+    expect(storage.setItem).not.toHaveBeenCalled();
+  });
+
+  it("FR-LIB-004 requires explicit discard confirmation before closing a dirty edit draft", async () => {
+    const user = userEvent.setup();
+    const book = {
+      id: "book-1",
+      title: "Kindred",
+      authors: ["Octavia E. Butler"],
+      authorUnknown: false,
+    };
+    const storage = {
+      getItem: vi
+        .fn()
+        .mockReturnValue(JSON.stringify({ version: 1, books: [book] })),
+      setItem: vi.fn(),
+    };
+    const confirmSpy = vi
+      .spyOn(window, "confirm")
+      .mockReturnValueOnce(false)
+      .mockReturnValueOnce(false)
+      .mockReturnValueOnce(true);
+    render(<LibrarianApp storage={storage} />);
+
+    const edit = await screen.findByRole("button", { name: "Edit Kindred" });
+    storage.getItem.mockClear();
+    await user.click(edit);
+
+    const title = screen.getByRole("textbox", { name: "Title" });
+    await user.clear(title);
+    await user.type(title, "Kindred (Edited)");
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(confirmSpy).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("dialog", { name: "Edit book" })).toBeInTheDocument();
+    expect(title).toHaveValue("Kindred (Edited)");
+
+    await user.click(screen.getByRole("button", { name: "Close edit dialog" }));
+    expect(confirmSpy).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole("dialog", { name: "Edit book" })).toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+    expect(confirmSpy).toHaveBeenCalledTimes(3);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(edit).toHaveFocus();
+    expect(storage.getItem).not.toHaveBeenCalled();
+    expect(storage.setItem).not.toHaveBeenCalled();
+  });
+
+  it("FR-LIB-004 enables Save changes only for valid dirty drafts and preserves disabled authors when Author unknown is checked", async () => {
+    const user = userEvent.setup();
+    const book = {
+      id: "book-1",
+      title: "Kindred",
+      authors: ["Octavia E. Butler"],
+      authorUnknown: false,
+    };
+    render(
+      <LibrarianApp
+        storage={{
+          getItem: vi
+            .fn()
+            .mockReturnValue(JSON.stringify({ version: 1, books: [book] })),
+          setItem: vi.fn(),
+        }}
+      />,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: "Edit Kindred" }),
+    );
+
+    const dialog = screen.getByRole("dialog", { name: "Edit book" });
+    const title = within(dialog).getByRole("textbox", { name: "Title" });
+    const authorInput = within(dialog).getByRole("textbox", {
+      name: "Author name",
+    });
+    const addAuthor = within(dialog).getByRole("button", { name: "Add author" });
+    const save = within(dialog).getByRole("button", { name: "Save changes" });
+    const authorUnknown = within(dialog).getByRole("checkbox", {
+      name: "Author unknown",
+    });
+
+    expect(save).toBeDisabled();
+
+    await user.clear(title);
+    await user.type(title, "   ");
+    expect(save).toBeDisabled();
+
+    await user.clear(title);
+    await user.type(title, "Kindred Revised");
+    expect(save).toBeEnabled();
+
+    await user.click(authorUnknown);
+    expect(within(dialog).getByText("Octavia E. Butler")).toBeInTheDocument();
+    expect(authorInput).toBeDisabled();
+    expect(addAuthor).toBeDisabled();
+    expect(
+      within(dialog).getByRole("button", {
+        name: "Remove author Octavia E. Butler",
+      }),
+    ).toBeDisabled();
+    expect(save).toBeEnabled();
+  });
+
+  it("FR-DUP-001 FR-DUP-002 FR-LIB-004 blocks exact duplicates inline during edit", async () => {
+    const user = userEvent.setup();
+    const books = [
+      {
+        id: "book-1",
+        title: "Kindred",
+        authors: ["Octavia E. Butler"],
+        authorUnknown: false,
+      },
+      {
+        id: "book-2",
+        title: "Dune",
+        authors: ["Frank Herbert"],
+        authorUnknown: false,
+      },
+    ];
+    render(
+      <LibrarianApp
+        storage={{
+          getItem: vi.fn().mockReturnValue(JSON.stringify({ version: 1, books })),
+          setItem: vi.fn(),
+        }}
+      />,
+    );
+
+    await user.click(await screen.findByRole("button", { name: "Edit Kindred" }));
+
+    const dialog = screen.getByRole("dialog", { name: "Edit book" });
+    await user.clear(within(dialog).getByRole("textbox", { name: "Title" }));
+    await user.type(within(dialog).getByRole("textbox", { name: "Title" }), "  dune  ");
+    await user.click(
+      within(dialog).getByRole("button", {
+        name: "Remove author Octavia E. Butler",
+      }),
+    );
+    await user.type(
+      within(dialog).getByRole("textbox", { name: "Author name" }),
+      "Frank Herbert",
+    );
+    await user.click(within(dialog).getByRole("button", { name: "Add author" }));
+
+    expect(within(dialog).getByRole("alert")).toHaveTextContent("Duplicate");
+    expect(
+      within(dialog).getByRole("button", { name: "Save changes" }),
+    ).toBeDisabled();
+  });
+
+  it("FR-DUP-001 FR-DUP-003 FR-LIB-004 shows a non-blocking possible-duplicate warning during edit", async () => {
+    const user = userEvent.setup();
+    const books = [
+      {
+        id: "book-1",
+        title: "Kindred",
+        authors: ["Octavia E. Butler"],
+        authorUnknown: false,
+      },
+      {
+        id: "book-2",
+        title: "Piranesi",
+        authors: ["Susanna Clarke"],
+        authorUnknown: false,
+      },
+    ];
+    render(
+      <LibrarianApp
+        storage={{
+          getItem: vi.fn().mockReturnValue(JSON.stringify({ version: 1, books })),
+          setItem: vi.fn(),
+        }}
+      />,
+    );
+
+    await user.click(await screen.findByRole("button", { name: "Edit Kindred" }));
+
+    const dialog = screen.getByRole("dialog", { name: "Edit book" });
+    await user.clear(within(dialog).getByRole("textbox", { name: "Title" }));
+    await user.type(
+      within(dialog).getByRole("textbox", { name: "Title" }),
+      " piranesi ",
+    );
+    await user.click(
+      within(dialog).getByRole("checkbox", { name: "Author unknown" }),
+    );
+
+    expect(within(dialog).getByRole("status")).toHaveTextContent(
+      "Possible duplicate",
+    );
+    expect(
+      within(dialog).getByRole("button", { name: "Save changes" }),
+    ).toBeEnabled();
+  });
+
+  it("NFR-A11Y-001 NFR-A11Y-002 initially focuses Title and traps keyboard focus inside the edit dialog", async () => {
+    const user = userEvent.setup();
+    const book = {
+      id: "book-1",
+      title: "Kindred",
+      authors: ["Octavia E. Butler"],
+      authorUnknown: false,
+    };
+    render(
+      <LibrarianApp
+        storage={{
+          getItem: vi
+            .fn()
+            .mockReturnValue(JSON.stringify({ version: 1, books: [book] })),
+          setItem: vi.fn(),
+        }}
+      />,
+    );
+
+    await user.click(await screen.findByRole("button", { name: "Edit Kindred" }));
+
+    const title = screen.getByRole("textbox", { name: "Title" });
+    expect(title).toHaveFocus();
+    await user.tab({ shift: true });
+    expect(screen.getByRole("button", { name: "Close edit dialog" })).toHaveFocus();
+    await user.tab({ shift: true });
+    expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();
+    await user.tab();
+    expect(screen.getByRole("button", { name: "Close edit dialog" })).toHaveFocus();
+  });
+
+  it("FR-LIB-004 TC-STORAGE-001 TC-STORAGE-002 saves an edited book from the fresh collection with one complete write", async () => {
+    const user = userEvent.setup();
+    const target = {
+      id: "book-1",
+      title: "Kindred",
+      authors: ["Octavia E. Butler"],
+      authorUnknown: false,
+    };
+    const otherBook = {
+      id: "book-2",
+      title: "Beloved",
+      authors: ["Toni Morrison"],
+      authorUnknown: false,
+    };
+    const freshBook = {
+      id: "book-3",
+      title: "Piranesi",
+      authors: ["Susanna Clarke"],
+      authorUnknown: false,
+    };
+    let storedValue = JSON.stringify({ version: 1, books: [target, otherBook] });
+    const storage = {
+      getItem: vi
+        .fn()
+        .mockImplementationOnce(() => storedValue)
+        .mockImplementation(() =>
+          JSON.stringify({
+            version: 1,
+            books: [target, otherBook, freshBook],
+          }),
+        ),
+      setItem: vi.fn((_key: string, value: string) => {
+        storedValue = value;
+      }),
+    };
+    render(<LibrarianApp storage={storage} />);
+
+    await user.click(await screen.findByRole("button", { name: "Edit Kindred" }));
+    await user.clear(screen.getByRole("textbox", { name: "Title" }));
+    await user.type(screen.getByRole("textbox", { name: "Title" }), "Kindred Revised");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Kindred$/)).not.toBeInTheDocument();
+    expect(screen.getByText("Kindred Revised")).toBeInTheDocument();
+    expect(screen.getByText("Beloved")).toBeInTheDocument();
+    expect(screen.getByText("Piranesi")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "“Kindred Revised” was updated.",
+    );
+    expect(storage.setItem).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(storedValue)).toEqual({
+      version: 1,
+      books: [
+        {
+          ...target,
+          title: "Kindred Revised",
+        },
+        otherBook,
+        freshBook,
+      ],
+    });
+  });
+
+  it("FR-LIB-004 performs no write and refreshes Home Library when the edited target is already absent", async () => {
+    const user = userEvent.setup();
+    const target = {
+      id: "book-1",
+      title: "Kindred",
+      authors: ["Octavia E. Butler"],
+      authorUnknown: false,
+    };
+    const otherBook = {
+      id: "book-2",
+      title: "Beloved",
+      authors: ["Toni Morrison"],
+      authorUnknown: false,
+    };
+    const freshBook = {
+      id: "book-3",
+      title: "Piranesi",
+      authors: ["Susanna Clarke"],
+      authorUnknown: false,
+    };
+    const storage = {
+      getItem: vi
+        .fn()
+        .mockReturnValueOnce(JSON.stringify({ version: 1, books: [target, otherBook] }))
+        .mockReturnValue(
+          JSON.stringify({ version: 1, books: [otherBook, freshBook] }),
+        ),
+      setItem: vi.fn(),
+    };
+    render(<LibrarianApp storage={storage} />);
+
+    await user.click(await screen.findByRole("button", { name: "Edit Kindred" }));
+    await user.clear(screen.getByRole("textbox", { name: "Title" }));
+    await user.type(screen.getByRole("textbox", { name: "Title" }), "Kindred Revised");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(storage.setItem).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Kindred$/)).not.toBeInTheDocument();
+    expect(screen.queryByText("Kindred Revised")).not.toBeInTheDocument();
+    expect(screen.getByText("Beloved")).toBeInTheDocument();
+    expect(screen.getByText("Piranesi")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "“Kindred” is no longer in your library.",
+    );
+    expect(screen.getByRole("button", { name: "Remove Beloved" })).toHaveFocus();
+  });
+
+  it("FR-LIB-004 focuses the empty-state heading when a stale edit target leaves Home Library empty", async () => {
+    const user = userEvent.setup();
+    const target = {
+      id: "book-1",
+      title: "Kindred",
+      authors: ["Octavia E. Butler"],
+      authorUnknown: false,
+    };
+    const storage = {
+      getItem: vi
+        .fn()
+        .mockReturnValueOnce(JSON.stringify({ version: 1, books: [target] }))
+        .mockReturnValue(JSON.stringify({ version: 1, books: [] })),
+      setItem: vi.fn(),
+    };
+    render(<LibrarianApp storage={storage} />);
+
+    await user.click(await screen.findByRole("button", { name: "Edit Kindred" }));
+    await user.clear(screen.getByRole("textbox", { name: "Title" }));
+    await user.type(screen.getByRole("textbox", { name: "Title" }), "Kindred Revised");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Your library is empty" }),
+    ).toHaveFocus();
+  });
+
+  it("FR-LIB-004 keeps the dirty draft open after a fresh-read failure and retries the same update", async () => {
+    const user = userEvent.setup();
+    const book = {
+      id: "book-1",
+      title: "Kindred",
+      authors: ["Octavia E. Butler"],
+      authorUnknown: false,
+    };
+    let storedValue = JSON.stringify({ version: 1, books: [book] });
+    const storage = {
+      getItem: vi
+        .fn()
+        .mockImplementationOnce(() => storedValue)
+        .mockImplementationOnce(() => {
+          throw new DOMException("Storage unavailable", "SecurityError");
+        })
+        .mockImplementation(() => storedValue),
+      setItem: vi.fn((_key: string, value: string) => {
+        storedValue = value;
+      }),
+    };
+    render(<LibrarianApp storage={storage} />);
+
+    await user.click(await screen.findByRole("button", { name: "Edit Kindred" }));
+    await user.clear(screen.getByRole("textbox", { name: "Title" }));
+    await user.type(screen.getByRole("textbox", { name: "Title" }), "Kindred Revised");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    const dialog = screen.getByRole("dialog", { name: "Edit book" });
+    expect(within(dialog).getByRole("alert")).toHaveTextContent(
+      "“Kindred” was not updated.",
+    );
+    expect(within(dialog).getByRole("button", { name: "Retry" })).toBeEnabled();
+    expect(within(dialog).getByRole("button", { name: "Retry" })).toHaveFocus();
+    expect(within(dialog).getByRole("button", { name: "Cancel" })).toBeEnabled();
+    expect(within(dialog).getByRole("textbox", { name: "Title" })).toHaveValue(
+      "Kindred Revised",
+    );
+    expect(storage.setItem).not.toHaveBeenCalled();
+
+    await user.click(within(dialog).getByRole("button", { name: "Retry" }));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByText("Kindred Revised")).toBeInTheDocument();
+    expect(storage.setItem).toHaveBeenCalledTimes(1);
+  });
+
+  it("FR-LIB-004 keeps the dirty draft open after a write failure and retries the same update", async () => {
+    const user = userEvent.setup();
+    const book = {
+      id: "book-1",
+      title: "Kindred",
+      authors: ["Octavia E. Butler"],
+      authorUnknown: false,
+    };
+    let storedValue = JSON.stringify({ version: 1, books: [book] });
+    const storage = {
+      getItem: vi.fn(() => storedValue),
+      setItem: vi
+        .fn()
+        .mockImplementationOnce(() => {
+          throw new DOMException("Storage full", "QuotaExceededError");
+        })
+        .mockImplementation((_key: string, value: string) => {
+          storedValue = value;
+        }),
+    };
+    render(<LibrarianApp storage={storage} />);
+
+    await user.click(await screen.findByRole("button", { name: "Edit Kindred" }));
+    await user.clear(screen.getByRole("textbox", { name: "Title" }));
+    await user.type(screen.getByRole("textbox", { name: "Title" }), "Kindred Revised");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    const dialog = screen.getByRole("dialog", { name: "Edit book" });
+    expect(within(dialog).getByRole("alert")).toHaveTextContent(
+      "“Kindred” was not updated.",
+    );
+    expect(within(dialog).getByRole("textbox", { name: "Title" })).toHaveValue(
+      "Kindred Revised",
+    );
+    expect(storage.setItem).toHaveBeenCalledTimes(1);
+
+    await user.click(within(dialog).getByRole("button", { name: "Retry" }));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByText("Kindred Revised")).toBeInTheDocument();
+    expect(storage.setItem).toHaveBeenCalledTimes(2);
+  });
+
   it("FR-LIB-005 NFR-A11Y-003 removes from the fresh collection and focuses the next remaining book", async () => {
     const user = userEvent.setup();
     const target = {

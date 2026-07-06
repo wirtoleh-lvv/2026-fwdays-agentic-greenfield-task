@@ -17,6 +17,11 @@ export type RemoveHomeLibraryBookResult = {
   books: LibraryBook[];
 };
 
+export type UpdateHomeLibraryBookResult = {
+  outcome: "updated" | "already-absent";
+  books: LibraryBook[];
+};
+
 export class HomeLibraryLoadError extends Error {
   readonly retryable = true;
 
@@ -112,6 +117,35 @@ export function removeHomeLibraryBook(
     throw new HomeLibraryWriteError({ cause: error });
   }
   return { outcome: "removed", books };
+}
+
+export function updateHomeLibraryBook(
+  storage: HomeLibraryStorage,
+  targetId: string,
+  updates: LibraryBookInput,
+): UpdateHomeLibraryBookResult {
+  const latestBooks = loadHomeLibrary(storage);
+
+  if (!latestBooks.some((book) => book.id === targetId)) {
+    return { outcome: "already-absent", books: latestBooks };
+  }
+
+  if (storage.setItem === undefined) {
+    throw new HomeLibraryWriteError();
+  }
+
+  const books = latestBooks.map((book) =>
+    book.id === targetId ? { ...book, ...updates } : book,
+  );
+  try {
+    storage.setItem(
+      HOME_LIBRARY_STORAGE_KEY,
+      JSON.stringify({ version: 1, books }),
+    );
+  } catch (error) {
+    throw new HomeLibraryWriteError({ cause: error });
+  }
+  return { outcome: "updated", books };
 }
 
 function isHomeLibraryEnvelope(value: unknown): value is HomeLibraryEnvelope {
