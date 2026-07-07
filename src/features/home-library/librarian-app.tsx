@@ -28,6 +28,14 @@ import {
   type UpdateHomeLibraryBookResult,
 } from "../../lib/home-library/storage";
 
+function environmentSupportsHover() {
+  return (
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(hover: hover)").matches
+  );
+}
+
 type AppState =
   | { kind: "loading" }
   | {
@@ -190,6 +198,9 @@ function HomeLibrary({
   const [editDraft, setEditDraft] = useState<LibraryBookInput | null>(null);
   const [editAuthorInput, setEditAuthorInput] = useState("");
   const [editFailed, setEditFailed] = useState(false);
+  const [actionsRequireReveal] = useState(environmentSupportsHover);
+  const [hoveredBookId, setHoveredBookId] = useState<string | null>(null);
+  const [focusedBookId, setFocusedBookId] = useState<string | null>(null);
   const [removalTarget, setRemovalTarget] = useState<LibraryBook | null>(null);
   const [removalStatus, setRemovalStatus] = useState<string | null>(null);
   const [removalFailed, setRemovalFailed] = useState(false);
@@ -573,8 +584,45 @@ function HomeLibrary({
           </section>
         ) : (
           <ul className="home-library-list" aria-label="Saved books">
-            {visibleBooks.map((book, index) => (
-              <li key={book.id}>
+            {visibleBooks.map((book, index) => {
+              const actionsVisible =
+                !actionsRequireReveal ||
+                hoveredBookId === book.id ||
+                focusedBookId === book.id;
+
+              return (
+              <li
+                key={book.id}
+                onMouseEnter={() => {
+                  if (actionsRequireReveal) {
+                    setHoveredBookId(book.id);
+                  }
+                }}
+                onMouseLeave={() => {
+                  if (actionsRequireReveal) {
+                    setHoveredBookId((currentId) =>
+                      currentId === book.id ? null : currentId,
+                    );
+                  }
+                }}
+                onFocusCapture={() => {
+                  if (actionsRequireReveal) {
+                    setFocusedBookId(book.id);
+                  }
+                }}
+                onBlurCapture={(event) => {
+                  if (
+                    actionsRequireReveal &&
+                    !event.currentTarget.contains(
+                      event.relatedTarget as Node | null,
+                    )
+                  ) {
+                    setFocusedBookId((currentId) =>
+                      currentId === book.id ? null : currentId,
+                    );
+                  }
+                }}
+              >
                 <div
                   aria-hidden="true"
                   className={`home-library-book-cover home-library-book-cover-${index % 4}`}
@@ -591,7 +639,14 @@ function HomeLibrary({
                       : book.authors.join(", ")}
                   </span>
                 </div>
-                <div className="home-library-book-actions">
+                <div
+                  className="home-library-book-actions"
+                  style={
+                    actionsRequireReveal && !actionsVisible
+                      ? { opacity: 0, pointerEvents: "none" }
+                      : { opacity: 1, pointerEvents: "auto" }
+                  }
+                >
                   <button
                     className="edit-book-action"
                     type="button"
@@ -628,7 +683,7 @@ function HomeLibrary({
                   </button>
                 </div>
               </li>
-            ))}
+            )})}
           </ul>
         )}
         {editTarget === null || editDraft === null ? null : (

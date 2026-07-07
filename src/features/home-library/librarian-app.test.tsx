@@ -3,11 +3,105 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LibrarianApp } from "./librarian-app";
 
+function stubHoverCapability(matches: boolean) {
+  vi.stubGlobal(
+    "matchMedia",
+    vi.fn().mockImplementation((query: string) => ({
+      matches: query === "(hover: hover)" ? matches : false,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  );
+}
+
 afterEach(() => {
   vi.unstubAllGlobals();
 });
 
 describe("Home Library entry state", () => {
+  it("FR-LIB-004 FR-LIB-005 NFR-A11Y-001 NFR-A11Y-002 keeps book actions visually hidden in hover-capable environments until hover or focus", async () => {
+    stubHoverCapability(true);
+    const user = userEvent.setup();
+    const book = {
+      id: "book-1",
+      title: "Kindred",
+      authors: ["Octavia E. Butler"],
+      authorUnknown: false,
+    };
+    render(
+      <LibrarianApp
+        storage={{
+          getItem: vi
+            .fn()
+            .mockReturnValue(JSON.stringify({ version: 1, books: [book] })),
+          setItem: vi.fn(),
+        }}
+      />,
+    );
+
+    const edit = await screen.findByRole("button", { name: "Edit Kindred" });
+    const remove = screen.getByRole("button", { name: "Remove Kindred" });
+    const actions = edit.closest(".home-library-book-actions");
+    const card = edit.closest("li");
+
+    expect(actions).not.toBeNull();
+    expect(card).not.toBeNull();
+    expect(actions).toHaveStyle({ opacity: "0", pointerEvents: "none" });
+
+    await user.hover(card!);
+    expect(actions).toHaveStyle({ opacity: "1", pointerEvents: "auto" });
+
+    await user.unhover(card!);
+    expect(actions).toHaveStyle({ opacity: "0", pointerEvents: "none" });
+
+    await user.tab();
+    await user.tab();
+    await user.tab();
+    expect(edit).toHaveFocus();
+    expect(actions).toHaveStyle({ opacity: "1", pointerEvents: "auto" });
+
+    await user.tab();
+    expect(remove).toHaveFocus();
+    expect(actions).toHaveStyle({ opacity: "1", pointerEvents: "auto" });
+  });
+
+  it("FR-LIB-004 FR-LIB-005 NFR-A11Y-001 NFR-A11Y-002 keeps book actions visible and usable in no-hover environments", async () => {
+    stubHoverCapability(false);
+    const user = userEvent.setup();
+    const book = {
+      id: "book-1",
+      title: "Kindred",
+      authors: ["Octavia E. Butler"],
+      authorUnknown: false,
+    };
+    render(
+      <LibrarianApp
+        storage={{
+          getItem: vi
+            .fn()
+            .mockReturnValue(JSON.stringify({ version: 1, books: [book] })),
+          setItem: vi.fn(),
+        }}
+      />,
+    );
+
+    const edit = await screen.findByRole("button", { name: "Edit Kindred" });
+    const remove = screen.getByRole("button", { name: "Remove Kindred" });
+    const actions = edit.closest(".home-library-book-actions");
+
+    expect(actions).not.toBeNull();
+    expect(actions).toHaveStyle({ opacity: "1", pointerEvents: "auto" });
+    expect(remove).toBeInTheDocument();
+
+    await user.click(edit);
+    expect(screen.getByRole("dialog", { name: "Edit book" })).toBeInTheDocument();
+  });
+
   it("FR-LIB-004 NFR-A11Y-001 NFR-A11Y-002 opens Edit with prefilled saved values and clean close returns focus without storage access", async () => {
     const user = userEvent.setup();
     const books = [
