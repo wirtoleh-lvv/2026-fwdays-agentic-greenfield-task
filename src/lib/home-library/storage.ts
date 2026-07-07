@@ -17,6 +17,11 @@ export type RemoveHomeLibraryBookResult = {
   books: LibraryBook[];
 };
 
+export type AddHomeLibraryBookResult = {
+  addedBook: LibraryBook;
+  books: LibraryBook[];
+};
+
 export type UpdateHomeLibraryBookResult = {
   outcome: "updated" | "already-absent";
   books: LibraryBook[];
@@ -91,6 +96,35 @@ export function saveHomeLibrary(
     JSON.stringify({ version: 1, books }),
   );
   return books;
+}
+
+export function addHomeLibraryBook(
+  storage: HomeLibraryStorage,
+  draft: LibraryBookInput,
+  createId: () => string,
+): AddHomeLibraryBookResult {
+  const latestBooks = loadHomeLibrary(storage);
+
+  if (storage.setItem === undefined) {
+    throw new HomeLibraryWriteError();
+  }
+
+  const addedBook = {
+    id: createId(),
+    ...draft,
+  };
+  const books = [...latestBooks, addedBook];
+
+  try {
+    storage.setItem(
+      HOME_LIBRARY_STORAGE_KEY,
+      JSON.stringify({ version: 1, books }),
+    );
+  } catch (error) {
+    throw new HomeLibraryWriteError({ cause: error });
+  }
+
+  return { addedBook, books };
 }
 
 export function removeHomeLibraryBook(

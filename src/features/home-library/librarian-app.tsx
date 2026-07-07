@@ -15,12 +15,19 @@ import {
   PhotoExtractionForm,
   SiteHeader,
 } from "../photo-extraction/photo-extraction-form";
+import {
+  DuplicateReview,
+  duplicateConflictKey,
+  type DuplicateReviewPlan,
+} from "../duplicate-review/duplicate-review";
 import { classifyDuplicate } from "../../lib/home-library/duplicate-classifier";
 import {
+  addHomeLibraryBook,
   loadHomeLibrary,
   removeHomeLibraryBook,
   saveHomeLibrary,
   updateHomeLibraryBook,
+  type AddHomeLibraryBookResult,
   type HomeLibraryStorage,
   type LibraryBookInput,
   type LibraryBook,
@@ -35,6 +42,15 @@ function environmentSupportsHover() {
     window.matchMedia("(hover: hover)").matches
   );
 }
+
+const MANUAL_ADD_DRAFT_ID = "manual-add-draft";
+
+type ManualAddReviewCandidate = {
+  id: typeof MANUAL_ADD_DRAFT_ID;
+  title: string;
+  authors: string[];
+  authorUnknown: boolean;
+};
 
 type AppState =
   | { kind: "loading" }
@@ -132,7 +148,17 @@ export function LibrarianApp({
       savedCount={state.savedCount}
       searchQuery={searchQuery}
       restoreAddBooksFocus={state.restoreAddBooksFocus}
+      onLoadBooks={() => loadHomeLibrary(storage ?? window.localStorage)}
       onSearchQueryChange={setSearchQuery}
+      onAddManualBook={(draft) => {
+        const result = addHomeLibraryBook(
+          storage ?? window.localStorage,
+          draft,
+          createLibraryBookId,
+        );
+        setState({ kind: "home", books: result.books });
+        return result;
+      }}
       onEditBook={(targetId, updates) => {
         const result = updateHomeLibraryBook(
           storage ?? window.localStorage,
@@ -162,8 +188,10 @@ function HomeLibrary({
   savedCount,
   searchQuery,
   restoreAddBooksFocus = false,
+  onLoadBooks,
   onAddBooks,
   onSearchQueryChange,
+  onAddManualBook,
   onEditBook,
   onRemoveBook,
 }: {
@@ -171,8 +199,10 @@ function HomeLibrary({
   savedCount?: number;
   searchQuery: string;
   restoreAddBooksFocus?: boolean;
+  onLoadBooks: () => LibraryBook[];
   onAddBooks: () => void;
   onSearchQueryChange: (nextQuery: string) => void;
+  onAddManualBook: (draft: LibraryBookInput) => AddHomeLibraryBookResult;
   onEditBook: (
     targetId: string,
     updates: LibraryBookInput,
@@ -180,8 +210,16 @@ function HomeLibrary({
   onRemoveBook: (targetId: string) => RemoveHomeLibraryBookResult;
 }) {
   const addBooksButtonRef = useRef<HTMLButtonElement>(null);
+  const addManualButtonRef = useRef<HTMLButtonElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const manualAddDialogRef = useRef<HTMLElement>(null);
+  const manualAddPrimaryActionRef = useRef<HTMLButtonElement>(null);
+  const manualAddDuplicateRetryRef = useRef<HTMLButtonElement>(null);
+  const manualAddTitleRef = useRef<HTMLInputElement>(null);
+  const manualAddTriggerRef = useRef<HTMLButtonElement>(null);
+  const restoreManualAddFocusRef = useRef(false);
+  const pendingManualAddFocusIdRef = useRef<string | null>(null);
   const editDialogRef = useRef<HTMLElement>(null);
   const editPrimaryActionRef = useRef<HTMLButtonElement>(null);
   const editTitleRef = useRef<HTMLInputElement>(null);
@@ -198,6 +236,16 @@ function HomeLibrary({
   const [editDraft, setEditDraft] = useState<LibraryBookInput | null>(null);
   const [editAuthorInput, setEditAuthorInput] = useState("");
   const [editFailed, setEditFailed] = useState(false);
+  const [manualAddDraft, setManualAddDraft] = useState<LibraryBookInput | null>(
+    null,
+  );
+  const [manualAddAuthorInput, setManualAddAuthorInput] = useState("");
+  const [manualAddReviewDraft, setManualAddReviewDraft] =
+    useState<LibraryBookInput | null>(null);
+  const [manualAddDuplicatePlan, setManualAddDuplicatePlan] =
+    useState<DuplicateReviewPlan<ManualAddReviewCandidate> | null>(null);
+  const [manualAddFailed, setManualAddFailed] = useState(false);
+  const [manualAddDuplicateFailed, setManualAddDuplicateFailed] = useState(false);
   const [actionsRequireReveal] = useState(environmentSupportsHover);
   const [hoveredBookId, setHoveredBookId] = useState<string | null>(null);
   const [focusedBookId, setFocusedBookId] = useState<string | null>(null);
@@ -258,6 +306,28 @@ function HomeLibrary({
   }, [restoreAddBooksFocus]);
 
   useEffect(() => {
+    if (manualAddDraft !== null) {
+      if (manualAddFailed) {
+        manualAddPrimaryActionRef.current?.focus();
+      } else {
+        manualAddTitleRef.current?.focus();
+      }
+      return;
+    }
+
+    if (restoreManualAddFocusRef.current) {
+      manualAddTriggerRef.current?.focus();
+      restoreManualAddFocusRef.current = false;
+    }
+  }, [manualAddDraft, manualAddFailed]);
+
+  useEffect(() => {
+    if (manualAddDuplicatePlan !== null && manualAddDuplicateFailed) {
+      manualAddDuplicateRetryRef.current?.focus();
+    }
+  }, [manualAddDuplicateFailed, manualAddDuplicatePlan]);
+
+  useEffect(() => {
     if (editTarget !== null) {
       if (editFailed) {
         editPrimaryActionRef.current?.focus();
@@ -290,6 +360,14 @@ function HomeLibrary({
   }, [removalFailed, removalTarget]);
 
   useEffect(() => {
+    if (pendingManualAddFocusIdRef.current !== null) {
+      document
+        .getElementById(`edit-book-${pendingManualAddFocusIdRef.current}`)
+        ?.focus();
+      pendingManualAddFocusIdRef.current = null;
+      return;
+    }
+
     if (pendingEmptyStateFocusRef.current && books.length === 0) {
       headingRef.current?.focus();
       pendingEmptyStateFocusRef.current = false;
@@ -310,6 +388,134 @@ function HomeLibrary({
     restoreRemovalFocusRef.current = true;
     setRemovalFailed(false);
     setRemovalTarget(null);
+  }
+
+  function openManualAddDialog(trigger: HTMLButtonElement) {
+    manualAddTriggerRef.current = trigger;
+    setManualAddAuthorInput("");
+    setManualAddFailed(false);
+    setManualAddDuplicateFailed(false);
+    setManualAddDraft({
+      title: "",
+      authors: [],
+      authorUnknown: false,
+    });
+  }
+
+  function closeManualAddDialog(restoreFocus = true) {
+    restoreManualAddFocusRef.current = restoreFocus;
+    setManualAddAuthorInput("");
+    setManualAddFailed(false);
+    setManualAddDraft(null);
+  }
+
+  function requestCloseManualAddDialog() {
+    if (
+      manualAddDraft !== null &&
+      isManualAddDraftDirty(manualAddDraft, manualAddAuthorInput) &&
+      !window.confirm("Discard unsaved changes?")
+    ) {
+      return;
+    }
+
+    closeManualAddDialog();
+  }
+
+  function confirmManualAdd() {
+    if (manualAddDraft === null) {
+      return;
+    }
+
+    try {
+      const latestBooks = onLoadBooks();
+      const reviewCandidate = toManualAddReviewCandidate(manualAddDraft);
+      const conflicts = latestBooks.flatMap((libraryBook) => {
+        const category = classifyDuplicate(reviewCandidate, libraryBook);
+
+        return category === null
+          ? []
+          : [{ candidate: reviewCandidate, libraryBook, category }];
+      });
+
+      if (conflicts.length > 0) {
+        setManualAddFailed(false);
+        setManualAddDuplicateFailed(false);
+        setManualAddReviewDraft(manualAddDraft);
+        setManualAddDuplicatePlan({
+          candidates: [reviewCandidate],
+          conflicts,
+          resolutions: {},
+        });
+        closeManualAddDialog(false);
+        return;
+      }
+
+      const result: AddHomeLibraryBookResult = onAddManualBook(manualAddDraft);
+      pendingManualAddFocusIdRef.current = result.addedBook.id;
+      setRemovalStatus(`“${result.addedBook.title}” added to your library.`);
+      closeManualAddDialog(false);
+    } catch {
+      setManualAddFailed(true);
+      return;
+    }
+  }
+
+  function addManualAuthor() {
+    const nextAuthor = manualAddAuthorInput.trim();
+
+    if (
+      manualAddDraft === null ||
+      manualAddDraft.authorUnknown ||
+      nextAuthor.length === 0
+    ) {
+      return;
+    }
+
+    setManualAddFailed(false);
+    setManualAddDraft({
+      ...manualAddDraft,
+      authors: [...manualAddDraft.authors, nextAuthor],
+    });
+    setManualAddAuthorInput("");
+  }
+
+  function trapManualAddDialogFocus(event: KeyboardEvent<HTMLElement>) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      requestCloseManualAddDialog();
+      return;
+    }
+
+    if (event.key === "Tab") {
+      const controls = Array.from(
+        manualAddDialogRef.current?.querySelectorAll<
+          HTMLButtonElement | HTMLInputElement
+        >("button:not(:disabled), input:not(:disabled)") ?? [],
+      );
+      const firstControl = controls[0];
+      const lastControl = controls.at(-1);
+
+      if (event.shiftKey && document.activeElement === firstControl) {
+        event.preventDefault();
+        lastControl?.focus();
+        return;
+      }
+
+      if (!event.shiftKey && document.activeElement === lastControl) {
+        event.preventDefault();
+        firstControl?.focus();
+        return;
+      }
+    }
+
+    if (
+      event.key === "Enter" &&
+      document.activeElement instanceof HTMLInputElement &&
+      document.activeElement.id === "manual-add-book-author-input"
+    ) {
+      event.preventDefault();
+      addManualAuthor();
+    }
   }
 
   function closeEditDialog(restoreFocus = true) {
@@ -480,6 +686,178 @@ function HomeLibrary({
     closeEditDialog(result.outcome !== "already-absent");
   }
 
+  function continueManualAddDuplicateReview(
+    candidates: ManualAddReviewCandidate[],
+  ) {
+    if (manualAddReviewDraft === null || candidates.length === 0) {
+      return;
+    }
+
+    try {
+      const result = onAddManualBook(manualAddReviewDraft);
+      pendingManualAddFocusIdRef.current = result.addedBook.id;
+      setRemovalStatus(`“${result.addedBook.title}” added to your library.`);
+      setManualAddDuplicateFailed(false);
+      setManualAddDuplicatePlan(null);
+      setManualAddReviewDraft(null);
+    } catch {
+      setManualAddDuplicateFailed(true);
+      return;
+    }
+  }
+
+  function renderManualAddDialog() {
+    if (manualAddDraft === null) {
+      return null;
+    }
+
+    return (
+      <div className="remove-dialog-backdrop">
+        <section
+          ref={manualAddDialogRef}
+          className="remove-dialog edit-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="manual-add-dialog-title"
+          onKeyDown={trapManualAddDialogFocus}
+        >
+          <header>
+            <h2 id="manual-add-dialog-title">Add a book manually</h2>
+            <button
+              type="button"
+              aria-label="Close manual add dialog"
+              onClick={requestCloseManualAddDialog}
+            >
+              <X aria-hidden="true" />
+            </button>
+          </header>
+          <div className="remove-dialog-body edit-dialog-body">
+            <div className="edit-dialog-field">
+              <label htmlFor="manual-add-book-title">
+                Title <span aria-hidden="true">*</span>
+              </label>
+              <input
+                ref={manualAddTitleRef}
+                id="manual-add-book-title"
+                className="edit-dialog-input"
+                value={manualAddDraft.title}
+                onChange={(event) => {
+                  setManualAddDraft((current) =>
+                    current === null
+                      ? current
+                      : { ...current, title: event.target.value },
+                  );
+                  setManualAddFailed(false);
+                }}
+              />
+            </div>
+            <div className="edit-dialog-field">
+              <label htmlFor="manual-add-book-author-input">Author(s)</label>
+              {manualAddDraft.authors.length === 0 ? null : (
+                <div className="edit-dialog-chip-list">
+                  {manualAddDraft.authors.map((author, index) => (
+                    <span className="edit-dialog-chip" key={`${author}-${index}`}>
+                      {author}
+                      <button
+                        type="button"
+                        className="edit-dialog-chip-remove"
+                        aria-label={`Remove author ${author}`}
+                        disabled={manualAddDraft.authorUnknown}
+                        onClick={() => {
+                          setManualAddFailed(false);
+                          setManualAddDraft((current) =>
+                            current === null
+                              ? current
+                              : {
+                                  ...current,
+                                  authors: current.authors.filter(
+                                    (_currentAuthor, authorIndex) =>
+                                      authorIndex !== index,
+                                  ),
+                                },
+                          );
+                        }}
+                      >
+                        <X aria-hidden="true" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="edit-dialog-author-row">
+                <input
+                  id="manual-add-book-author-input"
+                  aria-label="Author name"
+                  className="edit-dialog-input"
+                  placeholder="Type a name and press Enter…"
+                  value={manualAddAuthorInput}
+                  disabled={manualAddDraft.authorUnknown}
+                  onChange={(event) => {
+                    setManualAddFailed(false);
+                    setManualAddAuthorInput(event.target.value);
+                  }}
+                />
+                <button
+                  type="button"
+                  className="edit-dialog-add-author"
+                  aria-label="Add author"
+                  disabled={
+                    manualAddDraft.authorUnknown ||
+                    manualAddAuthorInput.trim().length === 0
+                  }
+                  onClick={addManualAuthor}
+                >
+                  Add
+                </button>
+              </div>
+            </div>
+            <label className="edit-dialog-checkbox">
+              <input
+                type="checkbox"
+                checked={manualAddDraft.authorUnknown}
+                onChange={(event) => {
+                  setManualAddFailed(false);
+                  setManualAddDraft((current) =>
+                    current === null
+                      ? current
+                      : {
+                          ...current,
+                          authorUnknown: event.target.checked,
+                        },
+                  );
+                }}
+              />
+              Author unknown
+            </label>
+            {manualAddFailed ? (
+              <p className="message message-error" role="alert">
+                “{manualAddDraft.title.trim()}” was not added.
+              </p>
+            ) : null}
+            <div className="remove-dialog-actions edit-dialog-actions">
+              <button
+                ref={manualAddPrimaryActionRef}
+                className="primary-button"
+                type="button"
+                disabled={!isLibraryBookInputValid(manualAddDraft)}
+                onClick={confirmManualAdd}
+              >
+                {manualAddFailed ? "Retry" : "Add to library"}
+              </button>
+              <button
+                className="text-button"
+                type="button"
+                onClick={requestCloseManualAddDialog}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   if (books.length === 0) {
     return (
       <>
@@ -509,7 +887,17 @@ function HomeLibrary({
             <Plus aria-hidden="true" />
             Add books
           </button>
+          <button
+            ref={addManualButtonRef}
+            className="secondary-button"
+            type="button"
+            onClick={(event) => openManualAddDialog(event.currentTarget)}
+          >
+            <Plus aria-hidden="true" />
+            Add manually
+          </button>
         </main>
+        {renderManualAddDialog()}
       </>
     );
   }
@@ -562,6 +950,15 @@ function HomeLibrary({
               <Plus aria-hidden="true" />
               Add books
             </button>
+            <button
+              ref={addManualButtonRef}
+              className="secondary-button"
+              type="button"
+              onClick={(event) => openManualAddDialog(event.currentTarget)}
+            >
+              <Plus aria-hidden="true" />
+              Add manually
+            </button>
           </div>
         </div>
         {removalStatus !== null ? (
@@ -573,7 +970,56 @@ function HomeLibrary({
             {savedCount} {savedCount === 1 ? "book" : "books"} saved.
           </p>
         )}
-        {visibleBooks.length === 0 ? (
+        {manualAddDuplicatePlan !== null ? (
+          <>
+            {manualAddDuplicateFailed && manualAddReviewDraft !== null ? (
+              <div className="message message-error" role="alert">
+                <p>“{manualAddReviewDraft.title.trim()}” was not added.</p>
+                <button
+                  ref={manualAddDuplicateRetryRef}
+                  className="text-button"
+                  type="button"
+                  onClick={() =>
+                    continueManualAddDuplicateReview(
+                      getResolvedManualAddCandidates(manualAddDuplicatePlan),
+                    )
+                  }
+                >
+                  Retry
+                </button>
+              </div>
+            ) : null}
+            <DuplicateReview
+              candidateLabel="Manual Add draft"
+              plan={manualAddDuplicatePlan}
+              onBack={() => {
+                setManualAddDuplicateFailed(false);
+                setManualAddDuplicatePlan(null);
+                if (manualAddReviewDraft !== null) {
+                  setManualAddDraft(manualAddReviewDraft);
+                }
+                setManualAddReviewDraft(null);
+              }}
+              onResolve={(conflict, resolution) =>
+                {
+                  setManualAddDuplicateFailed(false);
+                  setManualAddDuplicatePlan((current) =>
+                    current === null
+                      ? null
+                      : {
+                          ...current,
+                          resolutions: {
+                            ...current.resolutions,
+                            [duplicateConflictKey(conflict)]: resolution,
+                          },
+                        },
+                  );
+                }
+              }
+              onContinue={continueManualAddDuplicateReview}
+            />
+          </>
+        ) : visibleBooks.length === 0 ? (
           <section className="home-library-no-results" aria-live="polite">
             <Search aria-hidden="true" />
             <h2>{`No results for "${searchQuery}"`}</h2>
@@ -648,6 +1094,7 @@ function HomeLibrary({
                   }
                 >
                   <button
+                    id={`edit-book-${book.id}`}
                     className="edit-book-action"
                     type="button"
                     aria-label={`Edit ${book.title}`}
@@ -846,6 +1293,7 @@ function HomeLibrary({
             </section>
           </div>
         )}
+        {renderManualAddDialog()}
         {removalTarget === null ? null : (
           <div className="remove-dialog-backdrop">
             <section
@@ -930,4 +1378,45 @@ function isLibraryBookInputValid(draft: LibraryBookInput): boolean {
     (draft.authorUnknown ||
       draft.authors.some((author) => author.trim().length > 0))
   );
+}
+
+function isManualAddDraftDirty(
+  draft: LibraryBookInput,
+  authorInput: string,
+): boolean {
+  return (
+    draft.title.length > 0 ||
+    draft.authorUnknown ||
+    draft.authors.length > 0 ||
+    authorInput.length > 0
+  );
+}
+
+function toManualAddReviewCandidate(
+  draft: LibraryBookInput,
+): ManualAddReviewCandidate {
+  return {
+    id: MANUAL_ADD_DRAFT_ID,
+    title: draft.title,
+    authors: draft.authorUnknown ? [] : draft.authors,
+    authorUnknown: draft.authorUnknown,
+  };
+}
+
+function getResolvedManualAddCandidates(
+  plan: DuplicateReviewPlan<ManualAddReviewCandidate>,
+): ManualAddReviewCandidate[] {
+  return plan.candidates.filter((candidate) => {
+    const candidateConflicts = plan.conflicts.filter(
+      (conflict) => conflict.candidate.id === candidate.id,
+    );
+
+    return (
+      candidateConflicts.length === 0 ||
+      candidateConflicts.every(
+        (conflict) =>
+          plan.resolutions[duplicateConflictKey(conflict)] === "save-anyway",
+      )
+    );
+  });
 }

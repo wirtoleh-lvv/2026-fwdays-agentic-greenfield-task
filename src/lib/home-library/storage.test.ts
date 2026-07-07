@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  addHomeLibraryBook,
   HOME_LIBRARY_STORAGE_KEY,
   loadHomeLibrary,
   removeHomeLibraryBook,
@@ -108,6 +109,132 @@ describe("Home Library browser-storage boundary", () => {
       HOME_LIBRARY_STORAGE_KEY,
       JSON.stringify({ version: 1, books: [freshlyAddedBook] }),
     );
+  });
+
+  it("FR-LIB-001 NFR-PRIV-001 TC-STORAGE-001 TC-STORAGE-002 appends one Manual Add book to the latest collection with one complete write", () => {
+    const existingBook = {
+      id: "book-existing",
+      title: "Kindred",
+      authors: ["Octavia E. Butler"],
+      authorUnknown: false,
+    };
+    const concurrentlyAddedBook = {
+      id: "book-concurrent",
+      title: "Beloved",
+      authors: ["Toni Morrison"],
+      authorUnknown: false,
+    };
+    const storage = {
+      getItem: vi.fn().mockReturnValue(
+        JSON.stringify({
+          version: 1,
+          books: [existingBook, concurrentlyAddedBook],
+        }),
+      ),
+      setItem: vi.fn(),
+    };
+
+    expect(
+      addHomeLibraryBook(
+        storage,
+        {
+          title: "Middlemarch",
+          authors: ["George Eliot"],
+          authorUnknown: false,
+        },
+        () => "local-middlemarch",
+      ),
+    ).toEqual({
+      addedBook: {
+        id: "local-middlemarch",
+        title: "Middlemarch",
+        authors: ["George Eliot"],
+        authorUnknown: false,
+      },
+      books: [
+        existingBook,
+        concurrentlyAddedBook,
+        {
+          id: "local-middlemarch",
+          title: "Middlemarch",
+          authors: ["George Eliot"],
+          authorUnknown: false,
+        },
+      ],
+    });
+    expect(storage.getItem).toHaveBeenCalledTimes(1);
+    expect(storage.getItem).toHaveBeenCalledWith(HOME_LIBRARY_STORAGE_KEY);
+    expect(storage.setItem).toHaveBeenCalledTimes(1);
+    expect(storage.setItem).toHaveBeenCalledWith(
+      HOME_LIBRARY_STORAGE_KEY,
+      JSON.stringify({
+        version: 1,
+        books: [
+          existingBook,
+          concurrentlyAddedBook,
+          {
+            id: "local-middlemarch",
+            title: "Middlemarch",
+            authors: ["George Eliot"],
+            authorUnknown: false,
+          },
+        ],
+      }),
+    );
+  });
+
+  it("FR-FAIL-004 FR-FAIL-005 exposes Manual Add read and write failures as retryable without destructive replacement", () => {
+    const unreadableValue = "not json";
+    const unreadableStorage = {
+      getItem: vi.fn().mockReturnValue(unreadableValue),
+      setItem: vi.fn(),
+    };
+
+    expect(() =>
+      addHomeLibraryBook(
+        unreadableStorage,
+        {
+          title: "Middlemarch",
+          authors: ["George Eliot"],
+          authorUnknown: false,
+        },
+        () => "local-middlemarch",
+      ),
+    ).toThrowError(
+      expect.objectContaining({
+        name: "HomeLibraryLoadError",
+        retryable: true,
+      }),
+    );
+    expect(unreadableStorage.setItem).not.toHaveBeenCalled();
+    expect(unreadableStorage.getItem()).toBe(unreadableValue);
+
+    const storedValue = JSON.stringify({ version: 1, books: [] });
+    const unavailableWriteStorage = {
+      getItem: vi.fn().mockReturnValue(storedValue),
+      setItem: vi.fn(() => {
+        throw new DOMException("Storage full", "QuotaExceededError");
+      }),
+    };
+
+    expect(() =>
+      addHomeLibraryBook(
+        unavailableWriteStorage,
+        {
+          title: "Middlemarch",
+          authors: ["George Eliot"],
+          authorUnknown: false,
+        },
+        () => "local-middlemarch",
+      ),
+    ).toThrowError(
+      expect.objectContaining({
+        name: "HomeLibraryWriteError",
+        retryable: true,
+      }),
+    );
+    expect(unavailableWriteStorage.setItem).toHaveBeenCalledTimes(1);
+    expect(unavailableWriteStorage.getItem).toHaveBeenCalledTimes(1);
   });
 
   it("FR-LIB-004 TC-STORAGE-001 returns the latest collection without writing when an edited target is already absent", () => {
