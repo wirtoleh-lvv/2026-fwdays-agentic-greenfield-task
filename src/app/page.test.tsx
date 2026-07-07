@@ -11,7 +11,7 @@ describe("HomePage", () => {
     render(<HomePage />);
 
     await user.click(
-      await screen.findByRole("button", { name: "Add books" }),
+      await screen.findByRole("button", { name: "Add books from a photo" }),
     );
 
     expect(

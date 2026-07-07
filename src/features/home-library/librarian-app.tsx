@@ -7,6 +7,7 @@ import {
   Plus,
   Search,
   Trash2,
+  Upload,
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -884,8 +885,8 @@ function HomeLibrary({
             type="button"
             onClick={onAddBooks}
           >
-            <Plus aria-hidden="true" />
-            Add books
+            <Upload aria-hidden="true" />
+            Add books from a photo
           </button>
           <button
             ref={addManualButtonRef}
@@ -893,7 +894,6 @@ function HomeLibrary({
             type="button"
             onClick={(event) => openManualAddDialog(event.currentTarget)}
           >
-            <Plus aria-hidden="true" />
             Add manually
           </button>
         </main>
@@ -942,15 +942,6 @@ function HomeLibrary({
               </div>
             </div>
             <button
-              ref={addBooksButtonRef}
-              className="primary-button"
-              type="button"
-              onClick={onAddBooks}
-            >
-              <Plus aria-hidden="true" />
-              Add books
-            </button>
-            <button
               ref={addManualButtonRef}
               className="secondary-button"
               type="button"
@@ -958,6 +949,15 @@ function HomeLibrary({
             >
               <Plus aria-hidden="true" />
               Add manually
+            </button>
+            <button
+              ref={addBooksButtonRef}
+              className="primary-button"
+              type="button"
+              onClick={onAddBooks}
+            >
+              <Upload aria-hidden="true" />
+              Add from photo
             </button>
           </div>
         </div>

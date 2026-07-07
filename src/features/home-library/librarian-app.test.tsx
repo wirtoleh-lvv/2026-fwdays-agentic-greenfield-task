@@ -987,7 +987,7 @@ describe("Home Library entry state", () => {
       />,
     );
 
-    const addBooks = await screen.findByRole("button", { name: "Add books" });
+    const addBooks = await screen.findByRole("button", { name: "Add from photo" });
     addBooks.focus();
     await user.keyboard("{Enter}");
     await user.upload(
@@ -1090,7 +1090,7 @@ describe("Home Library entry state", () => {
       />,
     );
 
-    await user.click(await screen.findByRole("button", { name: "Add books" }));
+    await user.click(await screen.findByRole("button", { name: "Add from photo" }));
     await user.upload(
       screen.getByLabelText("Book-cover photo"),
       new File(["photo"], "books.jpg", { type: "image/jpeg" }),
@@ -1187,7 +1187,7 @@ describe("Home Library entry state", () => {
       />,
     );
 
-    await user.click(await screen.findByRole("button", { name: "Add books" }));
+    await user.click(await screen.findByRole("button", { name: "Add from photo" }));
     await user.upload(
       screen.getByLabelText("Book-cover photo"),
       new File(["photo"], "books.jpg", { type: "image/jpeg" }),
@@ -1280,7 +1280,7 @@ describe("Home Library entry state", () => {
       />,
     );
 
-    await user.click(await screen.findByRole("button", { name: "Add books" }));
+    await user.click(await screen.findByRole("button", { name: "Add from photo" }));
     await user.upload(
       screen.getByLabelText("Book-cover photo"),
       new File(["photo"], "book.jpg", { type: "image/jpeg" }),
@@ -1331,7 +1331,7 @@ describe("Home Library entry state", () => {
     ).toBeInTheDocument();
     expect(emptyStorage.setItem).not.toHaveBeenCalled();
 
-    await user.click(screen.getByRole("button", { name: "Add books" }));
+    await user.click(screen.getByRole("button", { name: "Add books from a photo" }));
 
     expect(
       screen.getByRole("heading", { name: "Add books from a photo" }),
@@ -1376,7 +1376,7 @@ describe("Home Library entry state", () => {
     expect(screen.getByText("Octavia E. Butler")).toBeInTheDocument();
     expect(screen.getByText("The Employees")).toBeInTheDocument();
     expect(screen.getByText("Author unknown")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Add books" }));
+    await user.click(screen.getByRole("button", { name: "Add from photo" }));
     expect(
       screen.getByRole("heading", { name: "Add books from a photo" }),
     ).toBeInTheDocument();
@@ -1404,14 +1404,14 @@ describe("Home Library entry state", () => {
       />,
     );
 
-    const addBooks = await screen.findByRole("button", { name: "Add books" });
+    const addBooks = await screen.findByRole("button", { name: "Add books from a photo" });
     await user.click(addBooks);
     await user.click(screen.getByRole("button", { name: "Cancel" }));
 
     expect(
       await screen.findByRole("heading", { name: "Your library is empty" }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Add books" })).toHaveFocus();
+    expect(screen.getByRole("button", { name: "Add books from a photo" })).toHaveFocus();
   });
 
   it("FR-CONFIRM-005 FR-LIB-002 FR-LIB-003 NFR-A11Y-001 NFR-A11Y-002 opens Manual Add without storage access and restores focus to Add manually when a clean draft closes", async () => {
@@ -2117,7 +2117,7 @@ describe("Home Library entry state", () => {
       screen.queryByText("The Left Hand of Darkness"),
     ).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Add books" }));
+    await user.click(screen.getByRole("button", { name: "Add from photo" }));
     expect(
       screen.getByRole("heading", { name: "Add books from a photo" }),
     ).toBeInTheDocument();
@@ -2191,7 +2191,7 @@ describe("Home Library entry state", () => {
     await user.type(search, "pira");
     expect(screen.getByText('No results for "pira"')).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Add books" }));
+    await user.click(screen.getByRole("button", { name: "Add from photo" }));
     await user.upload(
       screen.getByLabelText("Book-cover photo"),
       new File(["photo"], "book.jpg", { type: "image/jpeg" }),
