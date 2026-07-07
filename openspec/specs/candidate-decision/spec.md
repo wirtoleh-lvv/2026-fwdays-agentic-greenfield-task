@@ -35,7 +35,7 @@ The system SHALL derive an undecided candidate's readiness from its current info
 - **THEN** the system clears the unknown-author acknowledgement and derives readiness from the entered author information
 
 ### Requirement: Confirm only the current valid candidate information
-The system SHALL let the user explicitly confirm a candidate only while it is `Ready for Confirmation`, SHALL retain that decision only in transient browser state, and SHALL treat only explicitly confirmed candidates as eligible for a future save operation. Confirming SHALL NOT create or persist a Library Book. (`FR-CONFIRM-003`, `FR-CONFIRM-006`)
+The system SHALL let the user explicitly confirm a candidate only while it is `Ready for Confirmation`, SHALL retain that decision only in transient browser state, and SHALL treat only explicitly confirmed candidates as eligible for the `Save confirmed books` action. Confirming SHALL NOT create or persist a Library Book. This requirement SHALL NOT prevent the separate explicit Home Library Manual Add path from writing directly to browser-local storage when that path's own requirements are satisfied. (`FR-CONFIRM-003`, `FR-CONFIRM-006`)
 
 #### Scenario: Ready candidate is confirmed
 - **WHEN** the user activates Confirm for a candidate marked `Ready for Confirmation`
