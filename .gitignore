@@ -18,6 +18,8 @@ dist/
 build/
 out/
 .next/
+*.tsbuildinfo
+next-env.d.ts
 __pycache__/
 *.pyc
 .venv/

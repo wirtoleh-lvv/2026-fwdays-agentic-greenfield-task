@@ -1,0 +1,4 @@
+interface:
+  display_name: "OpenSpec TDD"
+  short_description: "Implement approved OpenSpec behavior test-first"
+  default_prompt: "Use $openspec-tdd to implement the next approved OpenSpec scenario through one red-green-refactor cycle."

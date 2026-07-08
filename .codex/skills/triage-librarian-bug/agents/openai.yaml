@@ -1,0 +1,4 @@
+interface:
+  display_name: "Librarian Bug Triage"
+  short_description: "Map one bug to requirements and root cause"
+  default_prompt: "Use -librarian-bug to investigate one reported Librarian defect without modifying the implementation."

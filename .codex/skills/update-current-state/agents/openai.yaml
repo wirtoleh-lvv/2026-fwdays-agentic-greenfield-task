@@ -1,0 +1,4 @@
+interface:
+  display_name: "Update Current State"
+  short_description: "Maintain an evidence-based project handoff"
+  default_prompt: "Use $update-current-state to refresh docs/current-state.md from the repository and active OpenSpec evidence."
