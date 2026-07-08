@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { PhotoExtractionForm } from "./photo-extraction-form";
+import { stubExtractionFetch, uploadTestPhoto } from "./extraction-test-helpers";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -10,13 +11,10 @@ afterEach(() => {
 describe("empty extraction result", () => {
   it("FR-EXTRACT-002 FR-EXTRACT-003 reports no identified books and keeps retry available", async () => {
     const user = userEvent.setup();
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json([])));
+    stubExtractionFetch([]);
     render(<PhotoExtractionForm />);
 
-    await user.upload(
-      screen.getByLabelText("Book-cover photo"),
-      new File(["photo"], "books.jpg", { type: "image/jpeg" }),
-    );
+    await uploadTestPhoto(user);
     await user.click(
       screen.getByRole("button", { name: "Find books in photo" }),
     );

@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ExtractedBookCandidate } from "../../lib/photo-extraction/contracts";
 import { PhotoExtractionForm } from "./photo-extraction-form";
+import { stubExtractionFetch, uploadTestPhoto } from "./extraction-test-helpers";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -10,16 +11,10 @@ afterEach(() => {
 
 async function renderCandidates(candidates: ExtractedBookCandidate[]) {
   const user = userEvent.setup();
-  vi.stubGlobal(
-    "fetch",
-    vi.fn().mockResolvedValue(Response.json(candidates)),
-  );
+  stubExtractionFetch(candidates);
   render(<PhotoExtractionForm />);
 
-  await user.upload(
-    screen.getByLabelText("Book-cover photo"),
-    new File(["photo"], "books.jpg", { type: "image/jpeg" }),
-  );
+  await uploadTestPhoto(user);
   await user.click(
     screen.getByRole("button", { name: "Find books in photo" }),
   );
@@ -37,34 +32,26 @@ describe("candidate decisions", () => {
     const user = userEvent.setup();
     const onSaveConfirmedBooks = vi.fn();
     const storageWrite = vi.spyOn(Storage.prototype, "setItem");
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(
-        Response.json([
-          { id: "candidate-1", title: "Dune", authors: ["Frank Herbert"] },
-          {
-            id: "candidate-2",
-            title: "Kindred",
-            authors: ["Octavia E. Butler"],
-          },
-          {
-            id: "candidate-3",
-            title: "Piranesi",
-            authors: ["Susanna Clarke"],
-          },
-        ]),
-      ),
-    );
+    stubExtractionFetch([
+      { id: "candidate-1", title: "Dune", authors: ["Frank Herbert"] },
+      {
+        id: "candidate-2",
+        title: "Kindred",
+        authors: ["Octavia E. Butler"],
+      },
+      {
+        id: "candidate-3",
+        title: "Piranesi",
+        authors: ["Susanna Clarke"],
+      },
+    ]);
     render(
       <PhotoExtractionForm
         onSaveConfirmedBooks={onSaveConfirmedBooks}
       />,
     );
 
-    await user.upload(
-      screen.getByLabelText("Book-cover photo"),
-      new File(["photo"], "books.jpg", { type: "image/jpeg" }),
-    );
+    await uploadTestPhoto(user);
     await user.click(
       screen.getByRole("button", { name: "Find books in photo" }),
     );

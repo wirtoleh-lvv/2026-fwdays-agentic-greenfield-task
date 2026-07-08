@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { PhotoExtractionForm } from "./photo-extraction-form";
+import { stubExtractionFetch, uploadTestPhoto } from "./extraction-test-helpers";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -10,28 +11,20 @@ afterEach(() => {
 describe("photo extraction keyboard path", () => {
   it("NFR-A11Y-001 NFR-A11Y-002 operates upload, submission, and candidate editing from the keyboard", async () => {
     const user = userEvent.setup();
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(
-        Response.json([
-          {
-            id: "candidate-1",
-            title: "Dune",
-            authors: ["Frank Herbert"],
-          },
-        ]),
-      ),
-    );
+    stubExtractionFetch([
+      {
+        id: "candidate-1",
+        title: "Dune",
+        authors: ["Frank Herbert"],
+      },
+    ]);
     render(<PhotoExtractionForm />);
 
     await user.tab();
     const photoInput = screen.getByLabelText("Book-cover photo");
     expect(photoInput).toHaveFocus();
 
-    await user.upload(
-      photoInput,
-      new File(["photo"], "books.jpg", { type: "image/jpeg" }),
-    );
+    await uploadTestPhoto(user, photoInput);
     await user.tab();
     expect(
       screen.getByRole("button", { name: "Remove selected photo" }),
